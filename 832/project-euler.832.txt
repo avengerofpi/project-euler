@@ -1,0 +1,30 @@
+Problem 832
+
+Mex Sequence
+
+In this problem, XOR is used to represent the bitwise exclusive or of two
+numbers. Starting with blank paper repeatedly do the following:
+  1) Write down the smallest positive integer 'a' which is currently not on the
+     paper;
+  2) Find the smallest positive integer 'b' such that neither 'b' nor 'a XOR b'
+     is currently on the paper.
+  3) Then write down both 'b' and 'a XOR b'.
+
+After the first round, {1, 2, 3} will be written on the paper.
+
+In the second round, 'a = 4' and since 
+  4 XOR 5 = 1
+  4 XOR 6 = 2
+  4 XOR 7 = 3
+are all already written but
+  4 XOR 8 = 12
+is not, 'b = 8' and 'a XOR b' = 12.
+
+After n rounds there will be 3n numbers on the paper.
+Denoted their sum by M(n).
+For example,
+  M(10)   =       642
+  M(1000) = 5,432,148
+
+Find M(10 ** 18).
+Give your answer modulo 1,000,000,007.
