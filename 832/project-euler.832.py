@@ -8,7 +8,7 @@ N = 1000
 wN = int(log10(N)) + 1
 wn     = int(log10(3*N)) + 1
 wnBits = 2 * (int(log(3*N, 4)) + 1)
-wTupleSum = int(log10(9*N)) + 1
+wTupleSumDigits = int(log10(9*N)) + 1
 wTupleSumBits = wnBits + 2
 debug = True
 
@@ -17,54 +17,24 @@ def logFormatDetails():
     print(f"width of indices:     {wN} digits")
     print(f"width of a,b,ab:      {wn} digits")
     print(f"width of a,b,ab:      {wnBits} bits")
-    print(f"width of sum(a,b,ab): {wTupleSum} digits")
+    print(f"width of sum(a,b,ab): {wTupleSumDigits} digits")
     print(f"width of sum(a,b,ab): {wTupleSumBits} bits")
 
 def logLineSummaryWithFstring(i, a, b, ab):
     newTuple = (a, b, ab)
-    sumNewTuple=sum(newTuple)
+    sumNewTuple = sum(newTuple)
 
     sep = " - "
     formatIndex = f"{i:{wN}}: "
     formatTupleDigits = f"{a:{wn}} {b:{wn}} {ab:{wn}}"
     formatTupleBits   = f"{a:0{wnBits}b} {b:0{wnBits}b} {ab:0{wnBits}b}"
-    formatSumDigits = f"{sum(newTuple):{wTupleSum}}"
+    formatSumDigits = f"{sum(newTuple):{wTupleSumDigits}}"
     formatSumBits   = f"{sum(newTuple):0{wTupleSumBits}b}"
 
     formatIndexAndTupleDigits = f"{formatIndex}{formatTupleDigits}"
     formatIndexAndTupleBits   = f"{formatIndex}{formatTupleBits}"
     formatSumDigitsAndBits = f"{formatSumDigits}{sep}{formatSumBits}"
 
-    formatDigits = f"{formatTupleDigits}{sep}{formatSumDigits}"
-    #formatBits   = f"{formatIndexAndTupleBits}{sep}{formatSumBits}"
-    formatBits   = f"{formatTupleBits}{sep}{formatSumBits}"
-    formatDigitsAndBits = f"{formatIndex}{formatDigits}{sep}{formatBits}{sep}{formatSumDigitsAndBits}"
-
-    print(formatDigitsAndBits)
-
-def logLineSummary(i, a, b, ab):
-    """
-    Uses some globals for digit- and bit-widtds of values:
-        wn
-        wnBits
-        wTupleSum
-        wTupleSumBits
-    """
-    newTuple = (a, b, ab)
-    sumNewTuple=sum(newTuple)
-
-    sep = " - "
-    formatIndex = "{i:{wN}}: ".format(i=i, wN=wN)
-    formatTupleDigits = "{a:{wn}} {b:{wn}} {ab:{wn}}".format(a=a, b=b, ab=ab, wn=wn)
-    formatTupleBits   = "{a:0{wnBits}b} {b:0{wnBits}b} {ab:0{wnBits}b}".format(a=a, b=b, ab=ab, wnBits=wnBits)
-    formatSumDigits = "{sumNewTuple:{wTupleSum}}".format(sumNewTuple=sumNewTuple, wTupleSum=wTupleSum)
-    formatSumBits   = "{sumNewTuple:0{wTupleSumBits}b}".format(sumNewTuple=sumNewTuple, wTupleSumBits=wTupleSumBits)
-
-    formatIndexAndTupleDigits = f"{formatIndex}{formatTupleDigits}"
-    formatIndexAndTupleBits   = f"{formatIndex}{formatTupleBits}"
-    formatSumDigitsAndBits = f"{formatSumDigits}{sep}{formatSumBits}"
-
-    #formatDigits = f"{formatIndexAndTupleDigits}{sep}{formatSumDigits}"
     formatDigits = f"{formatTupleDigits}{sep}{formatSumDigits}"
     #formatBits   = f"{formatIndexAndTupleBits}{sep}{formatSumBits}"
     formatBits   = f"{formatTupleBits}{sep}{formatSumBits}"
