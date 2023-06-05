@@ -87,7 +87,7 @@ def expectedDistForSquareLamina(n, a, b, w, h):
     )
     """
 
-    expected = (\
+    expectedDist = (\
           scipy.integrate.nquad(dist, [[0,n]            for i in range(4)], opts=options)[0] \
      -2 * scipy.integrate.nquad(dist, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=options)[0] \
         + scipy.integrate.nquad(dist, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=options)[0] \
@@ -96,18 +96,19 @@ def expectedDistForSquareLamina(n, a, b, w, h):
     print(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}):")
     #print(f"  valueToDivideBy:     {valueToDivideBy}")
     printLamina(n, a, b, w, h)
-    print(f"  {expected}")
+    print(f"{expectedDist}")
     print()
-    return expected
+    return expectedDist
 
 def sumExpectedDistForSquareLaminaeOfSizeN(n):
+    print(f"sumExpectedDistForSquareLaminaeOfSizeN({n})")
     total = 0
     for a in range(1, n-1):
         for w in range(1, n-a):
             for b in range(1, n-1):
                 for h in range(1, n-b):
                     total += expectedDistForSquareLamina(n, a, b, w, h)
-    print(f"Total for n = {n}: {total}")
+    print(f"SubTotal: {total}")
     print()
     print('-' * 50)
     print()
