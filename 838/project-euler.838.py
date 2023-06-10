@@ -2,27 +2,25 @@
 
 # Imports
 from math import log, log10, prod, sqrt
+from collections import defaultdict
 
 # Constants
 debug = True
-class Test:
+class TestCase:
     def __init__(self, N, expected):
         self.N = N
         self.expected = expected
 
 TESTS = [
-    Test(40, "6.799056"),
-    Test(1080, "UNKNOWN"),
-    Test(2190, "UNKNOWN"),
-    Test(2800, "715.019337"),
+    TestCase(40, "6.799056"),
+    TestCase(2800, "715.019337"),
+    TestCase(10 ** 6, "UNKNOWN"),
 ]
-    
-
 
 # Functions
 def logDebug(msg = ""):
     if debug:
-        print(msg)
+        print(msg, flush=True)
 
 def computePrimesUpToN(N):
     """
@@ -51,22 +49,43 @@ def getPrimesToInclude(primesA, primesB, N):
     width = int(log10(sqrt(N))) + 1
 
     logDebug(f"Checking primes ending in {modA}:")
-    pAsToInclude = set()
-    for iA in range(len(primesA)):
-        pA = primesA[iA]
+    pAsToInclude = list()
+    pAsToIncludeDict = dict()
+    for pA in primesA:
         primesBCofactors = []
-        for iB in range(len(primesB)):
-            pB = primesB[iB]
-            if pB > pA:
-                if pA * pB <= N:
-                    pAsToInclude.add(pA)
-                    primesBCofactors.append(pB)
-                    #logDebug(f"  {pA} (because of {pB} ({pA * pB}))")
-                # only need to check the smallest such pB for each pA
-                #break
+        for pB in primesB:
+            if (pB > pA) and (pA * pB <= N):
+                primesBCofactors.append(pB)
         if len(primesBCofactors) > 0:
-            logDebug(f"  {pA:{width}} (because of {primesBCofactors})")
-            #logDebug()
+            msg = f"  {pA:{width}} (because of "
+            termsStart = 4
+            termsEnd = 2
+            if len(primesBCofactors) > termsStart + termsEnd:
+                primesBprefix = primesBCofactors[0:termsStart]
+                primesBsuffix = primesBCofactors[-termsEnd:]
+                msg += f"{primesBprefix} ... {primesBsuffix}"
+            else:
+                msg += f"{primesBCofactors}"
+            msg += f" ({len(primesBCofactors)}))"
+            logDebug(msg)
+
+            pAsToInclude.append(pA)
+            pAsToIncludeDict[pA] = tuple(primesBCofactors)
+
+    # Collecting map of pBs cofactors lists to pAs that satisfy/pair with them
+    cofactorsListToPAsDict = defaultdict(list)
+    for pA in pAsToIncludeDict.keys():
+        cofactors = pAsToIncludeDict[pA]
+        cofactorsListToPAsDict[cofactors].append(pA)
+    # Now figuring out which pAs to include, and which to replace with pB cofactors
+    for cofactors in cofactorsListToPAsDict.keys():
+        pAsList = cofactorsListToPAsDict[cofactors]
+        if prod(cofactors) < prod(pAsList):
+            logDebug(f"  {pAsList} can be removed and replaced with {cofactors}")
+            for pA in pAsList:
+                pAsToInclude.remove(pA)
+            pAsToInclude.extend(cofactors)
+            
     return pAsToInclude
 
 # Main logic
@@ -97,22 +116,14 @@ def main():
         #   p7 * p9 <= N.
         p7sToInclude = getPrimesToInclude(p7s, p9s, N)
         p9sToInclude = getPrimesToInclude(p9s, p7s, N)
+        logDebug(f"p7sToInclude: {p7sToInclude}")
+        logDebug(f"p9sToInclude: {p9sToInclude}")
 
         if len(p7sToInclude) > 0 and len(p9sToInclude) > 0:
             maxP7 = max(p7sToInclude)
             maxP9 = max(p9sToInclude)
             p7sToNotInclude = set()
             p9sToNotInclude = set()
-            if maxP7 > maxP9:
-                for p7 in p7sToInclude:
-                    if p7 > maxP9:
-                        logDebug(f"  removing {p7}")
-                        p7sToNotInclude.add(p7)
-            else:
-                for p9 in p9sToInclude:
-                    if p9 > maxP7:
-                        logDebug(f"  removing {p9}")
-                        p9sToNotInclude.add(p9)
 
             for p7 in p7sToInclude:
                 if p7 not in p7sToNotInclude:
