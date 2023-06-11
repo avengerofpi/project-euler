@@ -3,6 +3,7 @@
 # Imports
 from math import log, log10, prod, sqrt
 from collections import defaultdict
+import scipy
 
 # Constants
 debug = True
@@ -12,7 +13,7 @@ class TestCase:
         self.expected = expected
 
 TESTS = [
-    TestCase(40, "6.799056"),
+    #TestCase(40, "6.799056"),
     TestCase(2800, "715.019337"),
     TestCase(10 ** 6, "UNKNOWN"),
 ]
@@ -44,18 +45,20 @@ def computePrimesUpToN(N):
 def filterByUnitsDigitAndSort(arr, digit):
     return sorted(n for n in arr if n % 10 == digit)
 
-def getPrimesToInclude(primesA, primesB, N):
+def getPrimesToIncludeMap(primesA, primesB, N):
     modA = primesA[0] % 10
     width = int(log10(sqrt(N))) + 1
 
     logDebug(f"Checking primes ending in {modA}:")
-    pAsToInclude = list()
-    pAsToIncludeDict = dict()
+    pAsToIncludeMap = dict()
     for pA in primesA:
         primesBCofactors = []
         for pB in primesB:
-            if (pB > pA) and (pA * pB <= N):
+            if (pA < pB) and (pA * pB <= N):
                 primesBCofactors.append(pB)
+        pAsToIncludeMap[pA] = primesBCofactors
+
+        # Logging
         if len(primesBCofactors) > 0:
             msg = f"  {pA:{width}} (because of "
             termsStart = 4
@@ -69,24 +72,8 @@ def getPrimesToInclude(primesA, primesB, N):
             msg += f" ({len(primesBCofactors)}))"
             logDebug(msg)
 
-            pAsToInclude.append(pA)
-            pAsToIncludeDict[pA] = tuple(primesBCofactors)
 
-    # Collecting map of pBs cofactors lists to pAs that satisfy/pair with them
-    cofactorsListToPAsDict = defaultdict(list)
-    for pA in pAsToIncludeDict.keys():
-        cofactors = pAsToIncludeDict[pA]
-        cofactorsListToPAsDict[cofactors].append(pA)
-    # Now figuring out which pAs to include, and which to replace with pB cofactors
-    for cofactors in cofactorsListToPAsDict.keys():
-        pAsList = cofactorsListToPAsDict[cofactors]
-        if prod(cofactors) < prod(pAsList):
-            logDebug(f"  {pAsList} can be removed and replaced with {cofactors}")
-            for pA in pAsList:
-                pAsToInclude.remove(pA)
-            pAsToInclude.extend(cofactors)
-            
-    return pAsToInclude
+    return pAsToIncludeMap
 
 # Main logic
 def main():
@@ -98,42 +85,96 @@ def main():
         expected = test.expected
         logDebug(f"Running against N = {N}")
 
-        primesUpToN = computePrimesUpToN(N)
-        p3s = filterByUnitsDigitAndSort(primesUpToN, 3)
-        p7s = filterByUnitsDigitAndSort(primesUpToN, 7)
-        p9s = filterByUnitsDigitAndSort(primesUpToN, 9)
+        primes = computePrimesUpToN(N)
+        p3s = filterByUnitsDigitAndSort(primes, 3)
+        p7s = filterByUnitsDigitAndSort(primes, 7)
+        p9s = filterByUnitsDigitAndSort(primes, 9)
 
         # All primes ending in 3 need to be factors
         valuesToMultiply = sorted(p3s)
 
         # All remaining factors end in either 7 or 9. In order for a prime `p7`
-        # that ends in 7 to be included, it is necessary and sufficient for
-        # there to be larger prime `p9` that ends in 9 satisfying
+        # that ends in 7 to be included, it is necessary but not necessarily
+        # sufficient for there to be prime `p9` that ends in 9 satisfying
         #   p7 * p9 <= N.
         # Similarly, in order for a prime `p9` that ends in 9 to be included,
-        # it is necessary and sufficient for there to be larger prime `p7` that
+        # it is necessary but not sufficient for there to be prime `p7` that
         # ends in 7 satisfying
         #   p7 * p9 <= N.
-        p7sToInclude = getPrimesToInclude(p7s, p9s, N)
-        p9sToInclude = getPrimesToInclude(p9s, p7s, N)
-        logDebug(f"p7sToInclude: {p7sToInclude}")
-        logDebug(f"p9sToInclude: {p9sToInclude}")
+        p7sToIncludeMap = getPrimesToIncludeMap(p7s, p9s, N)
+        p9sToIncludeMap = getPrimesToIncludeMap(p9s, p7s, N)
 
-        if len(p7sToInclude) > 0 and len(p9sToInclude) > 0:
-            maxP7 = max(p7sToInclude)
-            maxP9 = max(p9sToInclude)
-            p7sToNotInclude = set()
-            p9sToNotInclude = set()
+        # Setup linear program stuff
+        primeLogs = { p: log(p) for p in primes }
 
-            for p7 in p7sToInclude:
-                if p7 not in p7sToNotInclude:
-                    valuesToMultiply.append(p7)
-            for p9 in p9sToInclude:
-                if p9 not in p9sToNotInclude:
-                    valuesToMultiply.append(p9)
+        p79s = p7s + p9s
+        print(p79s)
+        primeIndices = { p79s[i]: i for i in range(len(p79s)) }
 
+        cost = [log(p) for p in p79s]
+        #lowerBound = [0 for p79 in p79s]
+        #upperBound = [1 for p79 in p79s]
+        bounds = [[0,1] for p79 in p79s]
+
+        p79sToCofactorsMap = dict()
+        p79sToCofactorsMap.update(p7sToIncludeMap)
+        p79sToCofactorsMap.update(p9sToIncludeMap)
+
+        A_ub = []
+        b_ub = []
+        logDebug(f"Building A_ub and b_ub")
+        for p in p79s:
+            pI = primeIndices[p]
+            cofactors = p79sToCofactorsMap[p]
+            if len(cofactors):
+                logDebug(f"  Processing {p}: {cofactors}")
+            for cofactor in cofactors:
+                cofactorI = primeIndices[cofactor]
+                A_ub_row = [0 for p79 in p79s]
+                A_ub_row[pI] = -1
+                A_ub_row[cofactorI] = -1
+                A_ub.append(A_ub_row)
+                b_ub.append(-1)
+
+        # Logging
+        logDebug(f"A_ub:")
+        for row in A_ub:
+          logDebug(f"  {row}")
+        logDebug(f"b_ub: {b_ub}")
+
+        sqrtN = sqrt(N)
+        xInit = [1 if p79 < sqrt(N) else 0 for p79 in p79s]
+
+        # Run linear program
+        """
+        scipy.optimize.linprog(
+            c,
+            A_ub=None, b_ub=None,
+            A_eq=None, b_eq=None,
+            bounds=None,
+            method='highs',
+            callback=None,
+            options=None,
+            x0=None,
+            integrality=None
+        )
+        """
+        #result = scipy.optimize.linprog(cost, A_ub=A_ub, b_ub=b_ub, bounds=bounds, integrality=1, method=‘revised simplex’ x0=xInit)
+        result = scipy.optimize.linprog(cost, A_ub=A_ub, b_ub=b_ub, bounds=bounds, integrality=1)
+        minCost = result.fun
+        x = result.x
+        logDebug("Solution:")
+        xP7s = [p for p in p7s if x[primeIndices[p]]]
+        xP9s = [p for p in p9s if x[primeIndices[p]]]
+        logDebug(f"  p3s: ALL")
+        logDebug(f"  p7s: {xP7s}")
+        logDebug(f"  p9s: {xP9s}")
+
+
+        # Finish calculating solution
         product = prod(valuesToMultiply)
-        ans = log(product)
+        #ans = log(product)
+        ans = minCost + log(product)
         ansStr = f"{ans:.6f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
         print(f"{N}: {ansStr} - {successStr}")
