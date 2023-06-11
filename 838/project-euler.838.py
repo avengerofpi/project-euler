@@ -4,19 +4,19 @@
 from math import log, log10, prod, sqrt
 from collections import defaultdict
 import scipy
+from numpy import array
+from time import sleep
 
 # Constants
-debug = True
+debug = False
 class TestCase:
     def __init__(self, N, expected):
         self.N = N
         self.expected = expected
 
 TESTS = [
-    #TestCase(40, "6.799056"),
-    TestCase(2800, "715.019337"),
-    TestCase(10 ** 6, "UNKNOWN"),
-]
+    TestCase(2800, "715.019337")
+] + [ TestCase(N, "UNKNOWN") for N in range(830000, 10 ** 6, 10000) ]
 
 # Functions
 def logDebug(msg = ""):
@@ -39,7 +39,7 @@ def computePrimesUpToN(N):
                 checkPrimesI += 1
             if all(candidateP % p != 0 for p in primes[0:checkPrimesI + 1]):
                 primes.append(candidateP)
-                #print(f"{candidateP}")
+                #print(f"{candidateP}", flush=True)
     return tuple(primes)
 
 def filterByUnitsDigitAndSort(arr, digit):
@@ -83,7 +83,7 @@ def main():
         #N = 40
         N = test.N
         expected = test.expected
-        logDebug(f"Running against N = {N}")
+        print(f"Running against N = {N}", flush=True)
 
         primes = computePrimesUpToN(N)
         p3s = filterByUnitsDigitAndSort(primes, 3)
@@ -108,13 +108,14 @@ def main():
         primeLogs = { p: log(p) for p in primes }
 
         p79s = p7s + p9s
-        print(p79s)
         primeIndices = { p79s[i]: i for i in range(len(p79s)) }
 
         cost = [log(p) for p in p79s]
+        #cost = array([log(p) for p in p79s])
         #lowerBound = [0 for p79 in p79s]
         #upperBound = [1 for p79 in p79s]
         bounds = [[0,1] for p79 in p79s]
+        #bounds = array([[0,1] for p79 in p79s])
 
         p79sToCofactorsMap = dict()
         p79sToCofactorsMap.update(p7sToIncludeMap)
@@ -135,8 +136,11 @@ def main():
                 A_ub_row[cofactorI] = -1
                 A_ub.append(A_ub_row)
                 b_ub.append(-1)
+        #A_ub = array(A_ub)
+        #b_ub = array(b_ub)
 
         # Logging
+        print(f"A_ub is a {len(A_ub)} x {len(b_ub)} matrix", flush=True)
         logDebug(f"A_ub:")
         for row in A_ub:
           logDebug(f"  {row}")
@@ -159,16 +163,17 @@ def main():
             integrality=None
         )
         """
-        #result = scipy.optimize.linprog(cost, A_ub=A_ub, b_ub=b_ub, bounds=bounds, integrality=1, method=‘revised simplex’ x0=xInit)
-        result = scipy.optimize.linprog(cost, A_ub=A_ub, b_ub=b_ub, bounds=bounds, integrality=1)
+        #result = scipy.optimize.linprog(cost, A_ub=A_ub, b_ub=b_ub, bounds=bounds, integrality=1, method='revised simplex', x0=xInit)
+        sleep(5)
+        result = scipy.optimize.linprog(cost, A_ub=A_ub, b_ub=b_ub, bounds=bounds, integrality=1, method='highs')
         minCost = result.fun
         x = result.x
-        logDebug("Solution:")
+        print("Solution:", flush=True)
         xP7s = [p for p in p7s if x[primeIndices[p]]]
         xP9s = [p for p in p9s if x[primeIndices[p]]]
-        logDebug(f"  p3s: ALL")
-        logDebug(f"  p7s: {xP7s}")
-        logDebug(f"  p9s: {xP9s}")
+        print(f"  p3s: ALL", flush=True)
+        print(f"  p7s: {xP7s}", flush=True)
+        print(f"  p9s: {xP9s}", flush=True)
 
 
         # Finish calculating solution
@@ -177,8 +182,9 @@ def main():
         ans = minCost + log(product)
         ansStr = f"{ans:.6f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
-        print(f"{N}: {ansStr} - {successStr}")
-        logDebug()
+        print(f"{N}: {ansStr} - {successStr}", flush=True)
+        print("", flush=True)
+        #logDebug()
 
 # Main logic
 if __name__ == '__main__':
