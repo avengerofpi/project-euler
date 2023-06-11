@@ -4,6 +4,7 @@
 from math import log, log10, prod, sqrt
 from collections import defaultdict
 import scipy
+import numpy
 from numpy import array
 from time import sleep
 
@@ -14,9 +15,20 @@ class TestCase:
         self.N = N
         self.expected = expected
 
+#TESTS = [
+#    #TestCase(40, "6.799056"),
+#    TestCase(2800, "715.019337"),
+#    TestCase(10 ** 5, "UNKNOWN"),
+#    TestCase(5 * 10 ** 5, "UNKNOWN"),
+#    TestCase(10 ** 6, "UNKNOWN"),
+#]
+
 TESTS = [
     TestCase(2800, "715.019337")
-] + [ TestCase(N, "UNKNOWN") for N in range(830000, 10 ** 6, 10000) ]
+] + [ TestCase(N, "UNKNOWN") for N in range(30000, 10 ** 6, 10000) ]
+#] + [ TestCase(N, "UNKNOWN") for N in range(830000, 10 ** 6, 10000) ]
+#] + [ TestCase(N, "UNKNOWN") for N in range(750000, 10 ** 6, 10000) ]
+#] + [ TestCase(N, "UNKNOWN") for N in range(500000, 10 ** 6, 10000) ]
 
 # Functions
 def logDebug(msg = ""):
@@ -112,10 +124,8 @@ def main():
 
         cost = [log(p) for p in p79s]
         #cost = array([log(p) for p in p79s])
-        #lowerBound = [0 for p79 in p79s]
-        #upperBound = [1 for p79 in p79s]
-        bounds = [[0,1] for p79 in p79s]
-        #bounds = array([[0,1] for p79 in p79s])
+        bounds = [0,1]
+        #bounds = array([0,1])
 
         p79sToCofactorsMap = dict()
         p79sToCofactorsMap.update(p7sToIncludeMap)
@@ -140,8 +150,14 @@ def main():
         #b_ub = array(b_ub)
 
         # Logging
-        print(f"A_ub is a {len(A_ub)} x {len(b_ub)} matrix", flush=True)
+        numRows = len(A_ub)
+        numCols = len(b_ub)
+        print(f"A_ub is a {numRows} x {numCols} matrix", flush=True)
         logDebug(f"A_ub:")
+        A_ub_summed = numpy.sum(A_ub, axis=0)
+        #print(f"  A_ub_summed: {A_ub_summed}")
+        numIgnoredCols = len([i for i in range(numRows) if A_ub_summed[i] == 0])
+        print(f"  Num elements in A_ub_summed == 0: {numIgnoredCols } of {numCols} ({100 * numIgnoredCols / numCols:6.4f}%)")
         for row in A_ub:
           logDebug(f"  {row}")
         logDebug(f"b_ub: {b_ub}")
