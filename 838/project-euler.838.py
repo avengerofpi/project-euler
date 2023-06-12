@@ -24,8 +24,19 @@ class TestCase:
 #]
 
 TESTS = [
-    TestCase(2800, "715.019337")
-] + [ TestCase(N, "UNKNOWN") for N in range(30000, 10 ** 6, 10000) ]
+    TestCase(2800, "715.019337"),
+    TestCase( 1 * 10 ** 5, "UNKNOWN"),
+    TestCase( 2 * 10 ** 5, "UNKNOWN"),
+    TestCase( 3 * 10 ** 5, "UNKNOWN"),
+    TestCase( 4 * 10 ** 5, "UNKNOWN"),
+    TestCase( 5 * 10 ** 5, "UNKNOWN"),
+    TestCase( 6 * 10 ** 5, "UNKNOWN"),
+    TestCase( 7 * 10 ** 5, "UNKNOWN"),
+    TestCase( 8 * 10 ** 5, "UNKNOWN"),
+    TestCase( 9 * 10 ** 5, "UNKNOWN"),
+    TestCase(10 * 10 ** 5, "UNKNOWN"),
+    ]
+#] + [ TestCase(N, "UNKNOWN") for N in range(100000, 10 ** 6, 100000) ]
 #] + [ TestCase(N, "UNKNOWN") for N in range(830000, 10 ** 6, 10000) ]
 #] + [ TestCase(N, "UNKNOWN") for N in range(750000, 10 ** 6, 10000) ]
 #] + [ TestCase(N, "UNKNOWN") for N in range(500000, 10 ** 6, 10000) ]
@@ -62,13 +73,15 @@ def getPrimesToIncludeMap(primesA, primesB, N):
     width = int(log10(sqrt(N))) + 1
 
     logDebug(f"Checking primes ending in {modA}:")
-    pAsToIncludeMap = dict()
+    pAsToIncludeMap = defaultdict(list)
     for pA in primesA:
         primesBCofactors = []
         for pB in primesB:
             if (pA < pB) and (pA * pB <= N):
                 primesBCofactors.append(pB)
-        pAsToIncludeMap[pA] = primesBCofactors
+        #pAsToIncludeMap[pA] = primesBCofactors
+        if len(primesBCofactors) > 0:
+            pAsToIncludeMap[pA] = primesBCofactors
 
         # Logging
         if len(primesBCofactors) > 0:
@@ -119,7 +132,18 @@ def main():
         # Setup linear program stuff
         primeLogs = { p: log(p) for p in primes }
 
-        p79s = p7s + p9s
+        #p79s = sorted(p7s + list(p7sToIncludeMap.keys()) + p9s + list(p9sToIncludeMap.keys()))
+        p79set = set()
+        p79set.update(p7sToIncludeMap.keys())
+        p79set.update(p9sToIncludeMap.keys())
+        # Requires that the p7s and p9s lists are not empty
+        p79set.update(p7sToIncludeMap[p7s[0]])
+        p79set.update(p9sToIncludeMap[p9s[0]])
+        p79s = sorted(p79set)
+        print(f"Num p7s:  {len(p7s)}")
+        print(f"Num p9s:  {len(p9s)}")
+        #print(f"Num p79s: {len(p79s)} ({p79s})")
+        print(f"Num p79s: {len(p79s)}")
         primeIndices = { p79s[i]: i for i in range(len(p79s)) }
 
         cost = [log(p) for p in p79s]
@@ -127,7 +151,7 @@ def main():
         bounds = [0,1]
         #bounds = array([0,1])
 
-        p79sToCofactorsMap = dict()
+        p79sToCofactorsMap = defaultdict(list)
         p79sToCofactorsMap.update(p7sToIncludeMap)
         p79sToCofactorsMap.update(p9sToIncludeMap)
 
@@ -144,6 +168,7 @@ def main():
                 A_ub_row = [0 for p79 in p79s]
                 A_ub_row[pI] = -1
                 A_ub_row[cofactorI] = -1
+                logDebug(f"    {A_ub_row}")
                 A_ub.append(A_ub_row)
                 b_ub.append(-1)
         #A_ub = array(A_ub)
@@ -151,12 +176,12 @@ def main():
 
         # Logging
         numRows = len(A_ub)
-        numCols = len(b_ub)
+        numCols = len(A_ub[0])
         print(f"A_ub is a {numRows} x {numCols} matrix", flush=True)
         logDebug(f"A_ub:")
         A_ub_summed = numpy.sum(A_ub, axis=0)
         #print(f"  A_ub_summed: {A_ub_summed}")
-        numIgnoredCols = len([i for i in range(numRows) if A_ub_summed[i] == 0])
+        numIgnoredCols = len([i for i in range(numCols) if A_ub_summed[i] == 0])
         print(f"  Num elements in A_ub_summed == 0: {numIgnoredCols } of {numCols} ({100 * numIgnoredCols / numCols:6.4f}%)")
         for row in A_ub:
           logDebug(f"  {row}")
@@ -185,8 +210,8 @@ def main():
         minCost = result.fun
         x = result.x
         print("Solution:", flush=True)
-        xP7s = [p for p in p7s if x[primeIndices[p]]]
-        xP9s = [p for p in p9s if x[primeIndices[p]]]
+        xP7s = [p for p in p7s if p in p79s and x[primeIndices[p]]]
+        xP9s = [p for p in p9s if p in p79s and x[primeIndices[p]]]
         print(f"  p3s: ALL", flush=True)
         print(f"  p7s: {xP7s}", flush=True)
         print(f"  p9s: {xP9s}", flush=True)
