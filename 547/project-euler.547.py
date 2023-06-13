@@ -6,9 +6,13 @@ import scipy
 
 # Constants
 debug = True
+SCIPY_INT_OPTS = {
+    "limit": 100,
+    "epsabs": 1.49e-10
+}
 
 # Functions
-def logDebug(msg):
+def logDebug(msg = ""):
     if debug:
         print(msg)
 
@@ -62,6 +66,9 @@ def ONE(a, b, c, d):
 # 1.651351822536662
 # 1.6514 (Target)
 
+# 1.651351822536662
+# 1.6513518225368988
+
 def manualCaseFor3():
     expected3 = (\
           scipy.integrate.nquad(dist, [[0,3] for i in range(4)])[0] \
@@ -70,27 +77,24 @@ def manualCaseFor3():
     ) / 64
     print(f"n = 3 (manual): {expected3}")
 
+
 def expectedDistForSquareLamina(n, a, b, w, h):
-    options = {
-        "limit": 100,
-        "epsabs": 1.49e-10
-    }
     areaSquare = n ** 2
     areaVoid = w * h
     valueToDivideBy = (areaSquare - areaVoid) ** 2
 
     """
     valueToDivideBy = (\
-          scipy.integrate.nquad(ONE, [[0,n]            for i in range(4)], opts=options)[0] \
-     -2 * scipy.integrate.nquad(ONE, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=options)[0] \
-        + scipy.integrate.nquad(ONE, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=options)[0] \
+          scipy.integrate.nquad(ONE, [[0,n]            for i in range(4)], opts=SCIPY_INT_OPTS)[0] \
+     -2 * scipy.integrate.nquad(ONE, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=SCIPY_INT_OPTS)[0] \
+        + scipy.integrate.nquad(ONE, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=SCIPY_INT_OPTS)[0] \
     )
     """
 
     expectedDist = (\
-          scipy.integrate.nquad(dist, [[0,n]            for i in range(4)], opts=options)[0] \
-     -2 * scipy.integrate.nquad(dist, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=options)[0] \
-        + scipy.integrate.nquad(dist, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=options)[0] \
+          scipy.integrate.nquad(dist, [[0,n]            for i in range(4)], opts=SCIPY_INT_OPTS)[0] \
+     -2 * scipy.integrate.nquad(dist, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=SCIPY_INT_OPTS)[0] \
+        + scipy.integrate.nquad(dist, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=SCIPY_INT_OPTS)[0] \
     ) / valueToDivideBy
 
     print(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}):")
@@ -100,14 +104,53 @@ def expectedDistForSquareLamina(n, a, b, w, h):
     print()
     return expectedDist
 
+def computeFullSquarePart(n):
+    return scipy.integrate.nquad(dist, [[0,n] for i in range(4)], opts=SCIPY_INT_OPTS)[0]
+
+def computeBaseDict(n):
+    logDebug(f"computeBaseDict({n})")
+    baseDict = dict()
+    for a in range(1, n-1):
+        for b in range(1, n-1):
+            v = scipy.integrate.nquad(dist, [[0,n], [0,n], [a,a+1], [b,b+1]], opts=SCIPY_INT_OPTS)[0]
+            baseDict[(a, b)] = v
+            logDebug(f"  ({a}, {b}) = {v:10.6f}")
+    return baseDict
+    
+def expectedDistForSquareLaminaUsingBaseDict(baseDict, fullSquare, n, a, b, w, h):
+    areaSquare = n ** 2
+    areaVoid = w * h
+    valueToDivideBy = (areaSquare - areaVoid) ** 2
+
+    logDebug(f"expectedDistForSquareLaminaUsingBaseDict(baseDict, fullSquare, {n}, {a}, {b}, {w}, {h}):")
+    logDebug(f"  fullSquare:      {fullSquare:10.6f}")
+
+    voidPart = sum(baseDict[(a+ai, b+bi)] for ai in range(w) for bi in range(h))
+    expectedDist = (fullSquare - voidPart) / valueToDivideBy
+
+    logDebug(f"  voidPart:        {voidPart}")
+    logDebug(f"  valueToDivideBy: {valueToDivideBy}")
+    printLamina(n, a, b, w, h)
+    logDebug(f"{expectedDist:10.6f} = ({fullSquare:10.6f} - {voidPart:10.6f}) / {valueToDivideBy})")
+    logDebug()
+    return expectedDist
+
 def sumExpectedDistForSquareLaminaeOfSizeN(n):
     print(f"sumExpectedDistForSquareLaminaeOfSizeN({n})")
+    # Compute non-normalized contributions to expected distance for the entire
+    # square and for each 1x1 (single-block) lamina. Then the expected distance
+    # for the larger lamina can be computed from these without needing to
+    # perform the computationally intensive integrals again and again
+    # (memoization/dynamic programming).
+    fullSquare = computeFullSquarePart(n)
+    baseDict = computeBaseDict(n)
     total = 0
     for a in range(1, n-1):
         for w in range(1, n-a):
             for b in range(1, n-1):
                 for h in range(1, n-b):
-                    total += expectedDistForSquareLamina(n, a, b, w, h)
+                    #total += expectedDistForSquareLamina(n, a, b, w, h, baseDict)
+                    total += expectedDistForSquareLaminaUsingBaseDict(baseDict, fullSquare, n, a, b, w, h)
     print(f"SubTotal: {total}")
     print()
     print('-' * 50)
@@ -117,7 +160,7 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
 def main():
     total = 0
     minN = 3
-    maxN = 40
+    maxN = 4
     for n in range(minN, maxN + 1):
         total += sumExpectedDistForSquareLaminaeOfSizeN(n)
     print(f"Grand total for n from {minN} to {maxN}: {total}")
