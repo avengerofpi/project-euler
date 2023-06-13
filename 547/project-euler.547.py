@@ -70,27 +70,51 @@ def manualCaseFor3():
     ) / 64
     print(f"n = 3 (manual): {expected3}")
 
-def expectedDistForSquareLamina(n, a, b, w, h):
-    options = {
-        "limit": 100,
-        "epsabs": 1.49e-10
-    }
-    areaSquare = n ** 2
-    areaVoid = w * h
-    valueToDivideBy = (areaSquare - areaVoid) ** 2
 
-    """
+"""
+There are three partials per lamina, three integrals to compute as part of an
+inclusion-exclusion process to find the desired 'lamina-punctured integral.' They
+are computed and combined as follows, where (a,b) is the coordinate of the lower
+left corner of the removed rectangle, and (w,h) are the width and height of the
+removed rectangle (respectively).
     valueToDivideBy = (\
           scipy.integrate.nquad(ONE, [[0,n]            for i in range(4)], opts=options)[0] \
      -2 * scipy.integrate.nquad(ONE, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=options)[0] \
         + scipy.integrate.nquad(ONE, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=options)[0] \
     )
-    """
+
+The memoizedPartials and getPartial method help to avoid duplicate computations.
+"""
+memoizedPartials = dict()
+def getPartial(a, b, c, d):
+    options = {
+        "limit": 100,
+        "epsabs": 1.49e-10
+    }
+
+    k = (a, b, c, d)
+    v = 0
+    logDebug(f"Computing partial for {k}")
+    if k in memoizedPartials.keys():
+        logDebug(f"  Partial HAS been previously computed")
+        v = memoizedPartials[k]
+    else:
+        logDebug(f"  Partial has NOT been previously computed")
+        v = scipy.integrate.nquad(dist, k, opts=options)[0]
+        memoizedPartials[k] = v
+    logDebug(f"  Value: {v}")
+
+    return v
+
+def expectedDistForSquareLamina(n, a, b, w, h):
+    areaSquare = n ** 2
+    areaVoid = w * h
+    valueToDivideBy = (areaSquare - areaVoid) ** 2
 
     expectedDist = (\
-          scipy.integrate.nquad(dist, [[0,n]            for i in range(4)], opts=options)[0] \
-     -2 * scipy.integrate.nquad(dist, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=options)[0] \
-        + scipy.integrate.nquad(dist, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=options)[0] \
+          getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
+     -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
+        + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
     ) / valueToDivideBy
 
     print(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}):")
@@ -120,6 +144,7 @@ def main():
     maxN = 40
     for n in range(minN, maxN + 1):
         total += sumExpectedDistForSquareLaminaeOfSizeN(n)
+    print()
     print(f"Grand total for n from {minN} to {maxN}: {total}")
 
 # Main logic
