@@ -229,23 +229,23 @@ def doSomeExperimentation2():
     n = 9
     (a, b) = (1, 2)
     (w, h) = (2, 3)
-    keys = [
+    equivalentLaminaKeys = [
         (n,     a,     b, w, h),
         (n,     a, n-b-h, w, h),
-        (n, n-a-2,     b, w, h),
-        (n, n-a-2, n-b-h, w, h),
+        (n, n-a-w,     b, w, h),
+        (n, n-a-w, n-b-h, w, h),
 
         (n,     b,     a, h, w),
         (n, n-b-h,     a, h, w),
-        (n,     b, n-a-2, h, w),
-        (n, n-b-h, n-a-2, h, w),
+        (n,     b, n-a-w, h, w),
+        (n, n-b-h, n-a-w, h, w),
     ]
     dd = dict()
-    for k in keys:
+    for k in equivalentLaminaKeys:
         dd[k] = expectedDistForSquareLamina(*k)
         print()
 
-    for k in keys:
+    for k in equivalentLaminaKeys:
         v = dd[k]
         print(f"{k} = {v}")
 
