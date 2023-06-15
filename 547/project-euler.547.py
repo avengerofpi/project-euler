@@ -6,6 +6,18 @@ import scipy
 
 # Constants
 debug = True
+class TestCase:
+    def __init__(self, N, expected):
+        self.N = N
+        self.expected = expected
+
+TESTS = [
+    TestCase(3, "1.6514"),
+    TestCase(4, "19.6564"),
+    #TestCase(5, "UNKNOWN"),
+    #TestCase(40, "UNKNOWN"),
+]
+
 
 # Functions
 def logDebug(msg):
@@ -162,7 +174,17 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
             for b in range(1, n-1):
                 for h in range(1, n-b):
                     total += expectedDistForSquareLamina(n, a, b, w, h)
-    print(f"SubTotal: {total}")
+    print(f"SubTotal for N = {n:>2}: {total}")
+    testCase = None
+    for t in TESTS:
+        if t.N == n:
+            testCase = t
+            break
+    if testCase:
+        expected = testCase.expected
+        ansStr = f"{total:.6f}"
+        successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
+        print(f"{n}: {ansStr} - {successStr}", flush=True)
     print()
     print('-' * 50)
     print()
