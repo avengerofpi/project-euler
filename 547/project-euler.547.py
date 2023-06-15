@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Imports
-from math import log, log2, log10, sqrt
+from math import log, log2, log10, sqrt, gcd
 import scipy
 
 # Constants
@@ -106,22 +106,52 @@ def getPartial(a, b, c, d):
 
     return v
 
+"""
+If one square lamina is a pure scaling of another square lamina, the expected
+distance scales in exactly the same way. For example,
+  xxx
+  x x
+  xxx
+is a 2x scaling of
+  xxxxxx
+  xxxxxx
+  xx  xx
+  xx  xx
+  xxxxxx
+  xxxxxx
+and so we can compute
+    expectedDistForSquareLamina(6,2,2,2,2) = 2 * a
+where
+    a = expectedDistForSquareLamina(3,1,1,1,1)
+"""
+memoizedExpectedDistForSquareLamina = dict()
 def expectedDistForSquareLamina(n, a, b, w, h):
-    areaSquare = n ** 2
-    areaVoid = w * h
-    valueToDivideBy = (areaSquare - areaVoid) ** 2
+    # Check if lamina is a scaled copy of a smaller lamina
+    scale = gcd(n, gcd(a, gcd(b, gcd(w, h))))
+    k = (v//2 for v in [n, a, b, w, h])
+    if k in memoizedExpectedDistForSquareLamina.keys():
+        expectedDist = memoizedExpectedDistForSquareLamina[k]
+    else:
+        areaSquare = n ** 2
+        areaVoid = w * h
+        valueToDivideBy = (areaSquare - areaVoid) ** 2
 
-    expectedDist = (\
-          getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
-     -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
-        + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
-    ) / valueToDivideBy
+        #expectedDist = 1
+        #"""
+        expectedDist = (\
+              getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
+         -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
+            + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
+        ) / valueToDivideBy
+        #"""
 
     print(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}):")
     #print(f"  valueToDivideBy:     {valueToDivideBy}")
     printLamina(n, a, b, w, h)
     print(f"{expectedDist}")
     print()
+    k = (n, a, b, w, h)
+    memoizedExpectedDistForSquareLamina[k] = expectedDist
     return expectedDist
 
 def sumExpectedDistForSquareLaminaeOfSizeN(n):
