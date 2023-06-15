@@ -197,7 +197,7 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
             break
     if testCase:
         expected = testCase.expected
-        ansStr = f"{total:.6f}"
+        ansStr = f"{total:.4f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
         print(f"{n}: {ansStr} - {successStr}", flush=True)
     print()
