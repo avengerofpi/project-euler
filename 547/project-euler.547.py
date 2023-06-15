@@ -158,16 +158,16 @@ def expectedDistForSquareLamina(n, a, b, w, h):
         #"""
 
     print(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}):")
-    #print(f"  valueToDivideBy:     {valueToDivideBy}")
+    print(f"  valueToDivideBy:     {valueToDivideBy}")
     printLamina(n, a, b, w, h)
     print(f"{expectedDist}")
-    print()
+    #print()
     k = (n, a, b, w, h)
     memoizedExpectedDistForSquareLamina[k] = expectedDist
     return expectedDist
 
 def sumExpectedDistForSquareLaminaeOfSizeN(n):
-    print(f"sumExpectedDistForSquareLaminaeOfSizeN({n})")
+    #print(f"sumExpectedDistForSquareLaminaeOfSizeN({n})")
     total = 0
     for a in range(1, n-1):
         for w in range(1, n-a):
@@ -185,19 +185,65 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
         ansStr = f"{total:.6f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
         print(f"{n}: {ansStr} - {successStr}", flush=True)
-    print()
-    print('-' * 50)
-    print()
+    #print()
+    #print('-' * 50)
+    #print()
     return total
+
+def doSomeExperimentation():
+    a = expectedDistForSquareLamina(3,1,1,1,1)
+    print(f"a x 1 = {a * 1}")
+    print(f"a x 2 = {a * 2}")
+    print(f"a x 3 = {a * 3}")
+    print(f"a x 4 = {a * 4}")
+    print()
+    b = expectedDistForSquareLamina(6,2,2,2,2)
+    print(f"a x 2 = {a * 2}")
+    print(f"b x 1 = {b * 1}")
+    print()
+    c = expectedDistForSquareLamina(9,3,3,3,3)
+    print(f"a x 3 = {a * 3}")
+    print(f"c x 1 = {c * 1}")
+    print()
+    d = expectedDistForSquareLamina(12,4,4,4,4)
+    print(f"a x 4 = {a * 4}")
+    print(f"d x 1 = {d * 1}")
+    print()
+
+def doSomeExperimentation2():
+    n = 9
+    (a, b) = (1, 2)
+    (w, h) = (2, 3)
+    keys = [
+        (n,     a,     b, w, h),
+        (n,     a, n-b-h, w, h),
+        (n, n-a-2,     b, w, h),
+        (n, n-a-2, n-b-h, w, h),
+
+        (n,     b,     a, h, w),
+        (n, n-b-h,     a, h, w),
+        (n,     b, n-a-2, h, w),
+        (n, n-b-h, n-a-2, h, w),
+    ]
+    dd = dict()
+    for k in keys:
+        dd[k] = expectedDistForSquareLamina(*k)
+        print()
+
+    for k in keys:
+        v = dd[k]
+        print(f"{k} = {v}")
 
 def main():
     total = 0
     minN = 3
-    maxN = 40
-    for n in range(minN, maxN + 1):
-        total += sumExpectedDistForSquareLaminaeOfSizeN(n)
-    print()
-    print(f"Grand total for n from {minN} to {maxN}: {total}")
+    maxN = 6
+    #for n in range(minN, maxN + 1):
+    #    total += sumExpectedDistForSquareLaminaeOfSizeN(n)
+    #print()
+    #print(f"Grand total for n from {minN} to {maxN}: {total}")
+
+    doSomeExperimentation2()
 
 # Main logic
 if __name__ == '__main__':
