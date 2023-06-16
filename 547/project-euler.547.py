@@ -20,9 +20,9 @@ TESTS = [
 
 
 # Functions
-def logDebug(msg):
+def logDebug(msg = "", flush=True):
     if debug:
-        print(msg)
+        print(msg, flush=flush)
 
 def printLamina(n, a, b, w, h):
     INDENT = '  '
@@ -32,13 +32,13 @@ def printLamina(n, a, b, w, h):
     VOID_LINE = X*a + VOID*w + X*(n-a-w)
     # Top rows until void starts
     for r in range(n, b+h, -1):
-        print(INDENT + FULL_LINE)
+        logDebug(INDENT + FULL_LINE)
     # Print rows with void portion
     for r in range(b+h, b, -1):
-        print(INDENT + VOID_LINE)
+        logDebug(INDENT + VOID_LINE)
     # Bottom rows after void
     for r in range(b, 0, -1):
-        print(INDENT + FULL_LINE)
+        logDebug(INDENT + FULL_LINE)
 
 def dist(x1, y1, x2, y2):
     return sqrt( (x2-x1)**2 + (y2-y1)**2 )
@@ -80,7 +80,7 @@ def manualCaseFor3():
      -2 * scipy.integrate.nquad(dist, [[0,3], [0,3], [1,2], [1,2]])[0] \
         + scipy.integrate.nquad(dist, [[1,2] for i in range(4)])[0] \
     ) / 64
-    print(f"n = 3 (manual): {expected3}")
+    logDebug(f"n = 3 (manual): {expected3}")
 
 
 """
@@ -158,7 +158,7 @@ def expectedDistForSquareLamina(n, a, b, w, h):
         #"""
 
     printLamina(n, a, b, w, h)
-    print(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}): {expectedDist}")
+    logDebug(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}): {expectedDist}")
     baseK = (n, a, b, w, h)
     if baseK not in memoizedExpectedDistForSquareLamina.keys():
         equivalentKeys = [
@@ -173,23 +173,23 @@ def expectedDistForSquareLamina(n, a, b, w, h):
             (n, n-b-h, n-a-w, h, w),
         ]
         equivalentKeys = sorted(set(equivalentKeys))
-        print(f"The following keys are quivalent:")
+        logDebug(f"The following keys are quivalent:")
         for k in equivalentKeys:
-            print(f"  {k}")
+            logDebug(f"  {k}")
             printLamina(*k)
             memoizedExpectedDistForSquareLamina[k] = expectedDist
-    print()
+    logDebug()
     return expectedDist
 
 def sumExpectedDistForSquareLaminaeOfSizeN(n):
-    print(f"sumExpectedDistForSquareLaminaeOfSizeN({n})")
+    logDebug(f"sumExpectedDistForSquareLaminaeOfSizeN({n})")
     total = 0
     for a in range(1, n-1):
         for w in range(1, n-a):
             for b in range(1, n-1):
                 for h in range(1, n-b):
                     total += expectedDistForSquareLamina(n, a, b, w, h)
-    print(f"SubTotal for N = {n:>2}: {total}")
+    logDebug(f"SubTotal for N = {n:>2}: {total}")
     testCase = None
     for t in TESTS:
         if t.N == n:
@@ -199,7 +199,7 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
         expected = testCase.expected
         ansStr = f"{total:.4f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
-        print(f"{n}: {ansStr} - {successStr}", flush=True)
+        logDebug(f"{n}: {ansStr} - {successStr}", flush=True)
     print()
     print('-' * 50)
     print()
@@ -255,7 +255,7 @@ def main():
     maxN = 6
     for n in range(minN, maxN + 1):
         total += sumExpectedDistForSquareLaminaeOfSizeN(n)
-    print()
+    logDebug()
     print(f"Grand total for n from {minN} to {maxN}: {total}")
 
     #doSomeExperimentation2()
