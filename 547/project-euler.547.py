@@ -138,31 +138,33 @@ where
 """
 memoizedExpectedDistForSquareLamina = dict()
 def expectedDistForSquareLamina(n, a, b, w, h):
+    baseK = (n, a, b, w, h)
+    logDebug(f"computing expectedDistForSquareLamina{baseK}")
     # Check if lamina is a scaled copy of a smaller lamina
     scale = gcd(n, gcd(a, gcd(b, gcd(w, h))))
-    baseK = (n, a, b, w, h)
+    kScaled = tuple(v//scale for v in [n, a, b, w, h])
+    logDebug(f"Maximum scale is {scale} -> {kScaled}")
     usedK = baseK
     if baseK in memoizedExpectedDistForSquareLamina.keys():
         expectedDist = memoizedExpectedDistForSquareLamina[baseK]
         logDebug(f"The value for {baseK} is known from previous computations")
-    else:
-        kScaled = (v//2 for v in [n, a, b, w, h])
+    elif (scale > 1) and (kScaled in memoizedExpectedDistForSquareLamina.keys()):
         usedK = kScaled
-        if kScaled in memoizedExpectedDistForSquareLamina.keys():
-            expectedDist = memoizedExpectedDistForSquareLamina[kScaled]
-        else:
-            areaSquare = n ** 2
-            areaVoid = w * h
-            valueToDivideBy = (areaSquare - areaVoid) ** 2
+        expectedDist = memoizedExpectedDistForSquareLamina[kScaled]
+        logDebug(f"The value for {baseK} is known from previous computation of {kScaled}")
+    else:
+        areaSquare = n ** 2
+        areaVoid = w * h
+        valueToDivideBy = (areaSquare - areaVoid) ** 2
 
-            #expectedDist = 1
-            #"""
-            expectedDist = (\
-                  getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
-             -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
-                + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
-            ) / valueToDivideBy
-            #"""
+        #expectedDist = 1
+        #"""
+        expectedDist = (\
+              getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
+         -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
+            + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
+        ) / valueToDivideBy
+        #"""
 
     #logDebug(f"    valueToDivideBy:     {valueToDivideBy}")
     printLamina(n, a, b, w, h)
