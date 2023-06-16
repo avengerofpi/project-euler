@@ -140,26 +140,33 @@ memoizedExpectedDistForSquareLamina = dict()
 def expectedDistForSquareLamina(n, a, b, w, h):
     # Check if lamina is a scaled copy of a smaller lamina
     scale = gcd(n, gcd(a, gcd(b, gcd(w, h))))
-    kScaled = (v//2 for v in [n, a, b, w, h])
-    if kScaled in memoizedExpectedDistForSquareLamina.keys():
-        expectedDist = memoizedExpectedDistForSquareLamina[kScaled]
-    else:
-        areaSquare = n ** 2
-        areaVoid = w * h
-        valueToDivideBy = (areaSquare - areaVoid) ** 2
-
-        #expectedDist = 1
-        #"""
-        expectedDist = (\
-              getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
-         -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
-            + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
-        ) / valueToDivideBy
-        #"""
-
-    printLamina(n, a, b, w, h)
-    logDebug(f"expectedDistForSquareLamina({n}, {a}, {b}, {w}, {h}): {expectedDist}")
     baseK = (n, a, b, w, h)
+    usedK = baseK
+    if baseK in memoizedExpectedDistForSquareLamina.keys():
+        expectedDist = memoizedExpectedDistForSquareLamina[baseK]
+        logDebug(f"The value for {baseK} is known from previous computations")
+    else:
+        kScaled = (v//2 for v in [n, a, b, w, h])
+        usedK = kScaled
+        if kScaled in memoizedExpectedDistForSquareLamina.keys():
+            expectedDist = memoizedExpectedDistForSquareLamina[kScaled]
+        else:
+            areaSquare = n ** 2
+            areaVoid = w * h
+            valueToDivideBy = (areaSquare - areaVoid) ** 2
+
+            #expectedDist = 1
+            #"""
+            expectedDist = (\
+                  getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
+             -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
+                + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
+            ) / valueToDivideBy
+            #"""
+
+    #logDebug(f"    valueToDivideBy:     {valueToDivideBy}")
+    printLamina(n, a, b, w, h)
+    logDebug(f"expectedDistForSquareLamina{baseK}: {expectedDist}")
     if baseK not in memoizedExpectedDistForSquareLamina.keys():
         equivalentKeys = [
             (n,     a,     b, w, h),
@@ -176,7 +183,7 @@ def expectedDistForSquareLamina(n, a, b, w, h):
         logDebug(f"The following keys are quivalent:")
         for k in equivalentKeys:
             logDebug(f"  {k}")
-            printLamina(*k)
+            #printLamina(*k)
             memoizedExpectedDistForSquareLamina[k] = expectedDist
     logDebug()
     return expectedDist
@@ -200,9 +207,6 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
         ansStr = f"{total:.4f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
         logDebug(f"{n}: {ansStr} - {successStr}", flush=True)
-    print()
-    print('-' * 50)
-    print()
     return total
 
 def doSomeExperimentation():
@@ -252,11 +256,20 @@ def doSomeExperimentation2():
 def main():
     total = 0
     minN = 3
-    maxN = 6
+    maxN = 40
     for n in range(minN, maxN + 1):
         total += sumExpectedDistForSquareLaminaeOfSizeN(n)
+        logDebug()
+        print(f"Running total for n from {minN} to {n}: {total}")
+        logDebug()
+        logDebug('-' * 50)
+        logDebug()
+    logDebug()
+    logDebug('-' * 50)
+    logDebug('-' * 50)
     logDebug()
     print(f"Grand total for n from {minN} to {maxN}: {total}")
+    logDebug()
 
     #doSomeExperimentation2()
 
