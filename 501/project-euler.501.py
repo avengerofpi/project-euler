@@ -5,7 +5,6 @@ from math import log, log10, prod, sqrt
 from collections import defaultdict
 
 # Constants
-debug = True
 class TestCase:
     def __init__(self, N, expected):
         self.N = N
@@ -19,8 +18,17 @@ TESTS = [
 ]
 
 # Functions
+info = True
+debug = True
+verbose = False
+def logInfo(msg = ""):
+    if info:
+        print(msg, flush=True)
 def logDebug(msg = ""):
     if debug:
+        print(msg, flush=True)
+def logVerbose(msg = ""):
+    if verbose:
         print(msg, flush=True)
 
 def computePrimesUpToN(N):
@@ -39,7 +47,6 @@ def computePrimesUpToN(N):
                 checkPrimesI += 1
             if all(candidateP % p != 0 for p in primes[0:checkPrimesI + 1]):
                 primes.append(candidateP)
-                #print(f"{candidateP}", flush=True)
     return tuple(primes)
 
 # Main logic
@@ -48,14 +55,11 @@ def main():
         N = test.N
         expected = test.expected
 
-        print(f"Running against N = {N}", flush=True)
+        logInfo(f"Running against N = {N}")
         primeBound = N // 2
         primes = computePrimesUpToN(primeBound)
         logDebug(f"  Computing primes up to {primeBound} - found {len(primes)} from {primes[0]} to {primes[-1]}")
 
-        #numP = len(primes)
-        #for ip in range(nP):
-        #    p = primes[ip]
         p7List = []
         p3qList = []
         pqrList = []
@@ -84,18 +88,21 @@ def main():
                             #    break
 
         logDebug(f"  Found {len(p7List)} numbers of the form p**7")
-        #for (p,p7) in p7List:
-        #    logDebug(f"    {p:4}**7= {p7:8}")
+        if verbose:
+            for (p,p7) in p7List:
+                logVerbose(f"    {p:4}**7= {p7:8}")
         logDebug(f"  Found {len(p3qList)} numbers of the form p**3 * q")
-        #for (p,q,p3q) in p3qList:
-        #    logDebug(f"    {p:4}**3 * {q:4} = {p3q:8}")
+        if verbose:
+            for (p,q,p3q) in p3qList:
+                logVerbose(f"    {p:4}**3 * {q:4} = {p3q:8}")
         logDebug(f"  Found {len(pqrList)} numbers of the form p * q * r")
-        #for (p,q,r, pqr) in pqrList:
-        #    logDebug(f"    {p:4} * {q:4} * {r:4} = {pqr:8}")
+        if verbose:
+            for (p,q,r, pqr) in pqrList:
+                logVerbose(f"    {p:4} * {q:4} * {r:4} = {pqr:8}")
         ans = len(p7List) + len(p3qList) + len(pqrList)
         successStr = "SUCCESS" if (ans == expected) else f"FAILURE (expected {expected})"
-        print(f"{N}: {ans} - {successStr}", flush=True)
-        print("", flush=True)
+        logInfo(f"{N}: {ans} - {successStr}")
+        logInfo("")
 
 
 # Main logic
