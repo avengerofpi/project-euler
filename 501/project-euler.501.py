@@ -13,7 +13,7 @@ class TestCase:
 TESTS = [
     TestCase(100, 10),
     TestCase(1000, 180),
-    #TestCase(10 ** 6, 224427),
+    TestCase(10 ** 6, 224427),
     #TestCase(10 ** 12, "UNKNOWN"),
 ]
 
@@ -56,36 +56,49 @@ def main():
         expected = test.expected
 
         logInfo(f"Running against N = {N}")
-        primeBound = N // 2
+        primeBound = N // 6
         primes = computePrimesUpToN(primeBound)
         logDebug(f"  Computing primes up to {primeBound} - found {len(primes)} from {primes[0]} to {primes[-1]}")
 
         p7List = []
         p3qList = []
         pqrList = []
+        logDebug(f"Checking for n = p ** 7")
         for p in primes:
             p7 = p ** 7
             if p7 <= N:
                 p7List.append((p, p7))
+
+        logDebug(f"Checking for n = p**3 * q")
+        for p in primes:
             p3 = p ** 3
+            if N <= p3:
+                break
             for q in primes:
                 if p == q:
                     continue
                 p3q = p3 * q
                 if p3q <= N:
                     p3qList.append((p,q,p3q))
-                #else:
-                #    break
+                else:
+                    break
 
-                if p < q:
-                    pq = p * q
-                    for r in primes:
-                        if q < r:
-                            pqr = pq * r
-                            if pqr <= N:
-                                pqrList.append((p,q,r, pqr))
-                            #else:
-                            #    break
+        logDebug(f"Checking for n = p * q * r")
+        for p in primes:
+            for q in primes:
+                if q <= p:
+                    continue
+                pq = p * q
+                if N <= pq * q:
+                    break
+                for r in primes:
+                    if r <= q:
+                        continue
+                    pqr = pq * r
+                    if pqr <= N:
+                        pqrList.append((p,q,r, pqr))
+                    else:
+                        break
 
         logDebug(f"  Found {len(p7List)} numbers of the form p**7")
         if verbose:
