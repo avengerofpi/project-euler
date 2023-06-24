@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Imports
-from math import log, log10, prod, sqrt
+from math import log, log2, log10, prod, sqrt
 from collections import defaultdict
 import scipy
 import numpy
@@ -23,8 +23,9 @@ TESTS = [
     TestCase(  20000,   6116055),
     TestCase(10 ** 5,  14130558),
     TestCase(10 ** 6,  66623446),
-    #TestCase(10 ** 7, "UNKNOWN"),
-    #TestCase(10 ** 8, "UNKNOWN"),
+    TestCase(10 ** 7,  97735042),
+    TestCase(10 ** 8,  38488039),
+    #TestCase(10 ** 14, "UNKNOWN"),
 ]
 
 # Constants
@@ -76,15 +77,32 @@ def getTimeInMillis():
     return int(time.time() * 1000)
 
 # Functions
-memoExponents = range(10)
-memoModPowersOfTen = { i: 10**i % MODULUS for i in memoExponents }
+memoModBinaryPowersOfTen = { 0: 10 }
+memoModPowersOfTen = { }
+maxN = max(testCase.N for testCase in TESTS)
+logMaxN = int(log2(maxN)) + 1
+for i in range(1, logMaxN):
+    memoModBinaryPowersOfTen[i] = memoModBinaryPowersOfTen[i-1]**2 % MODULUS
+    logVerbose(f"memoModBinaryPowersOfTen[{i}] = 10**{2**i} = {memoModBinaryPowersOfTen[i]}")
 def modPowersOfTen(n):
     try:
         return memoModPowersOfTen[n]
     except:
-        m = 10**n % MODULUS
-        memoModPowersOfTen[n] = m
-        return m
+        # e.g., n = 23 -> 0b10111 -> 10111 -> ['1', '0', '1', '1', '1'] -> ['1', '1', '1', '0' '1']
+        binN = bin(n)
+        logVerbose(f"Computing memoModPowersOfTen[{n}]")
+        logVerbose(f"  n = {binN}")
+        binN = list(bin(n)[2:])
+        binN.reverse()
+        t = 1
+        for i in range(len(binN)):
+            if binN[i] == '1':
+                p = memoModBinaryPowersOfTen[i]
+                logVerbose(f"    Factor 10**(2**{i}) = 10**{2**i} = {p} mod {MODULUS}")
+                t = (t * p) % MODULUS
+        memoModPowersOfTen[n] = t
+        logVerbose(f"memoModPowersOfTen[{n}] = memoModPowersOfTen[{bin(n)}] = {t}")
+        return t
 
 memoSumPowersOfTen = { 0: 0, 1: 1 }
 def modSumPowersOfTen(n):
