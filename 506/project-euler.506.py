@@ -22,7 +22,7 @@ TESTS = [
     TestCase(  10000, 107644726),
     TestCase(  20000,   6116055),
     TestCase(10 ** 5,  14130558),
-    #TestCase(10 ** 6, "UNKNOWN"),
+    TestCase(10 ** 6,  66623446),
     #TestCase(10 ** 7, "UNKNOWN"),
     #TestCase(10 ** 8, "UNKNOWN"),
 ]
@@ -82,8 +82,18 @@ def modPowersOfTen(n):
     try:
         return memoModPowersOfTen[n]
     except:
-        m = min(i for i in memoModPowersOfTen.keys() if i < n)
-        return (memoModPowersOfTen[m] * 10**(n-m)) % MODULUS
+        m = 10**n % MODULUS
+        memoModPowersOfTen[n] = m
+        return m
+
+memoSumPowersOfTen = { 0: 0, 1: 1 }
+def modSumPowersOfTen(n):
+    try:
+        return memoSumPowersOfTen[n]
+    except:
+        m = (memoSumPowersOfTen[n-1] + modPowersOfTen(6*(n-1))) % MODULUS
+        memoSumPowersOfTen[n] = m
+        return m
 
 def S(N):
     logDebug(f"Computing S({N})")
@@ -95,13 +105,13 @@ def S(N):
         total += clockSpokeSum * k
         for a in range(clockLen):
             for i in range(k):
-                inc = clockWheel[a] * ((10**(6*i) - 1) // (10**6 - 1) ) * modPowersOfTen(clockSpokeSizes[a])
+                inc = clockWheel[a] * modSumPowersOfTen(i) * modPowersOfTen(clockSpokeSizes[a])
                 total = (inc + total) % MODULUS
 
         q = N % clockLen
         total += sum(clockSpokes[0:q])
         for a in range(q):
-            inc = clockWheel[a] * ((10**(6*k) - 1) // (10**6 - 1) ) * modPowersOfTen(clockSpokeSizes[a])
+            inc = clockWheel[a] * modSumPowersOfTen(k) * modPowersOfTen(clockSpokeSizes[a])
             total = (inc + total) % MODULUS
         logVerbose(f"  k = {k}, q = {q}")
 
