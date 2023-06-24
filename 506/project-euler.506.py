@@ -15,12 +15,15 @@ class TestCase:
         self.N = N
         self.expected = expected
 TESTS = [
-    TestCase(        11,     36120),
-    TestCase(       100,   9291482),
-    TestCase(      1000,  18232686),
-    TestCase(      2000,  65456260),
-    TestCase(   10 ** 4, 107644726),
-    TestCase(2* 10 ** 4,   6116055),
+    TestCase(     11,     36120),
+    TestCase(    100,   9291482),
+    TestCase(   1000,  18232686),
+    TestCase(   2000,  65456260),
+    TestCase(  10000, 107644726),
+    TestCase(  20000,   6116055),
+    TestCase(10 ** 5,  14130558),
+    #TestCase(10 ** 6, "UNKNOWN"),
+    #TestCase(10 ** 7, "UNKNOWN"),
     #TestCase(10 ** 8, "UNKNOWN"),
 ]
 
