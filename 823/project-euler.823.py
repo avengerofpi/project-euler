@@ -21,6 +21,11 @@ class TestCase:
 TESTS = [
     TestCase(5, 3, 21),
     TestCase(10, 100, 257),
+    TestCase(10, 101, 175),
+    TestCase(10, 1000, 257),
+    TestCase(10, 1001, 175),
+    TestCase(100, 1000, 989136573),
+    TestCase(1000, 10000, 204600045),
     #TestCase(a, b, "UNKNOWN"),
 ]
 
