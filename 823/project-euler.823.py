@@ -20,12 +20,16 @@ class TestCase:
 
 TESTS = [
     TestCase(5, 3, 21),
+    TestCase(5, 10, 19),
     TestCase(10, 100, 257),
     TestCase(10, 101, 175),
     TestCase(10, 1000, 257),
     TestCase(10, 1001, 175),
     TestCase(100, 1000, 989136573),
     TestCase(1000, 10000, 204600045),
+    TestCase(1000, 100000, 803889757),
+    # require too much memory atm
+    TestCase(1000, 1000000, "UNKNOWN"),
     #TestCase(a, b, "UNKNOWN"),
 ]
 
@@ -36,7 +40,7 @@ MOD = 1234567891
 info = True
 debug = False
 verbose = False
-timing = False
+timing = True
 def logInfo(msg = ""):
     if info:
         print(msg, flush=True)
@@ -84,9 +88,36 @@ def runFactorShuffle(n, numIters):
     logInfo(f"Running for n = {n}, {numIters} rounds:")
     currList = transformRange(n)
     logList(currList, 0)
+    # The first list will not be seen again, so don't bother adding it
+    seenToIndexMap = defaultdict(int)
     for i in range(1, numIters+1):
         currList = nextList(currList)
         logList(currList, i)
+        currTuple = tuple(tuple(e) for e in currList)
+        prevIndex = seenToIndexMap[currTuple]
+        if prevIndex:
+            period = i - prevIndex
+            remainingIters = numIters - i
+            loopsToSkip = remainingIters // period
+            itersAfterLooping = remainingIters % period
+            finalIndex = prevIndex + itersAfterLooping
+            for aList, aIndex in seenToIndexMap.items():
+                if aIndex == finalIndex:
+                    finalList = aList
+            logInfo(f"---------- THIS ENTRY HAS BEEN SEEN BEFORE ----------")
+            logInfo(f"  prevIndex          {prevIndex}")
+            logInfo(f"  currIndex          {i}")
+            logInfo(f"  period             {period}")
+            logInfo(f"  remainingIters     {remainingIters}")
+            logInfo(f"  loopsToSkip:       {loopsToSkip}")
+            logInfo(f"  itersAfterLooping: {itersAfterLooping}")
+            logInfo(f"  finalIndex:        {finalIndex}")
+            logInfo(f"  finalList:         {finalList}")
+
+            currList = finalList
+            break
+        else:
+            seenToIndexMap[currTuple] = i
     prodList = transformFactoredListIntoProductList(currList)
     finalSum = sum(prodList)
     logInfo(f"S({n}, {numIters}) -> {prodList} -> {finalSum}")
