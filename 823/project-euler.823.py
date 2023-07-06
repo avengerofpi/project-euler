@@ -12,24 +12,28 @@ import time
 from primefac import primefac
 
 # Tests
+UNKNOWN = "UNKNOWN"
 class TestCase:
-    def __init__(self, N, numIters, expected):
+    def __init__(self, N, numIters, expected, period = UNKNOWN, periodStart = UNKNOWN):
         self.N = N
         self.numIters = numIters
         self.expected = expected
+        self.period = period
+        self.periodStart = periodStart
 
 TESTS = [
     TestCase(5, 3, 21),
-    TestCase(5, 10, 19),
-    TestCase(10, 100, 257),
-    TestCase(10, 101, 175),
-    TestCase(10, 1000, 257),
-    TestCase(10, 1001, 175),
+    TestCase(5, 10, 19, 3, 4),
+    TestCase(10, 100, 257, 20, 9),
+    TestCase(10, 101, 175, 20, 9),
+    TestCase(10, 1000, 257, 20, 9),
+    TestCase(10, 1001, 175, 20, 9),
     TestCase(100, 1000, 989136573),
+    TestCase(100, 10**6, UNKNOWN),
     TestCase(1000, 10000, 204600045),
     TestCase(1000, 100000, 803889757),
     # require too much memory atm
-    TestCase(1000, 1000000, "UNKNOWN"),
+    TestCase(1000, 1000000, UNKNOWN),
     #TestCase(a, b, "UNKNOWN"),
 ]
 
@@ -90,12 +94,15 @@ def runFactorShuffle(n, numIters):
     logList(currList, 0)
     # The first list will not be seen again, so don't bother adding it
     seenToIndexMap = defaultdict(int)
+    period = UNKNOWN
+    periodStart = UNKNOWN
     for i in range(1, numIters+1):
         currList = nextList(currList)
         logList(currList, i)
         currTuple = tuple(tuple(e) for e in currList)
         prevIndex = seenToIndexMap[currTuple]
         if prevIndex:
+            periodStart = prevIndex
             period = i - prevIndex
             remainingIters = numIters - i
             loopsToSkip = remainingIters // period
@@ -105,7 +112,7 @@ def runFactorShuffle(n, numIters):
                 if aIndex == finalIndex:
                     finalList = aList
             logInfo(f"---------- THIS ENTRY HAS BEEN SEEN BEFORE ----------")
-            logInfo(f"  prevIndex          {prevIndex}")
+            logInfo(f"  periodStart        {periodStart}")
             logInfo(f"  currIndex          {i}")
             logInfo(f"  period             {period}")
             logInfo(f"  remainingIters     {remainingIters}")
@@ -113,6 +120,7 @@ def runFactorShuffle(n, numIters):
             logInfo(f"  itersAfterLooping: {itersAfterLooping}")
             logInfo(f"  finalIndex:        {finalIndex}")
             logInfo(f"  finalList:         {finalList}")
+            logInfo(f"-----------------------------------------------------")
 
             currList = finalList
             break
@@ -122,7 +130,7 @@ def runFactorShuffle(n, numIters):
     finalSum = sum(prodList)
     logInfo(f"S({n}, {numIters}) -> {prodList} -> {finalSum}")
 
-    return finalSum
+    return finalSum, period, periodStart
 
 def runTests():
     for test in TESTS:
@@ -132,10 +140,16 @@ def runTests():
         expected = test.expected
         logInfo(f"Running against N = {N}")
 
-        ansBeforeMod = runFactorShuffle(N, numIters)
+        ansBeforeMod, period, periodStart = runFactorShuffle(N, numIters)
+        logInfo(f"period(n = {N:6d}) = {period:6} (starts at {periodStart:6}) (final sum after {numIters} rounds: {ansBeforeMod}")
         ans = ansBeforeMod % MOD
-        successStr = "SUCCESS" if (ans == expected) else f"FAILURE (expected {expected})"
-        logInfo(f"{N}: {ans} - {successStr}")
+        if ans == UNKNOWN:
+            successStr = UNKNOWN
+        elif ans == expected:
+            successStr = "SUCCESS"
+        else:
+            successStr = f"FAILURE (expected {expected})"
+        logInfo(f"Result for {N} after {numIters} rounds: {ans} - {successStr}")
 
         endTime = getTimeInMillis()
         logTimeDiff = endTime - startTime
@@ -143,13 +157,14 @@ def runTests():
         logInfo()
 
 def troubleshoot():
-    runFactorShuffle(5, 3)
-    runFactorShuffle(10, 100)
+    for n in range(3, 100):
+        numIters = 10 ** 8
+        finalSum, period, periodStart = runFactorShuffle(n, numIters)
+        logInfo(f"period(n = {n:6d}) = {period:6d} (starts at {periodStart:6}) (final sum after {numIters} rounds: {finalSum}")
 
 # Main logic
 def main():
     #troubleshoot()
-
     runTests()
 
 # Main logic
