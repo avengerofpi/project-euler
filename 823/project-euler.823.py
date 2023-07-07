@@ -10,6 +10,8 @@ from datetime import timedelta
 import time
 #pip3 install primefac
 from primefac import primefac
+from colorama import Fore, Back, Style
+#print(f"{Fore.GREEN}hello{Fore.RED}World{ansi.Style.RESET_ALL}")
 
 # Tests
 UNKNOWN = "UNKNOWN"
@@ -22,19 +24,19 @@ class TestCase:
         self.periodStart = periodStart
 
 TESTS = [
-    TestCase(5, 3, 21),
-    TestCase(5, 10, 19, 3, 4),
-    TestCase(10, 100, 257, 20, 9),
-    TestCase(10, 101, 175, 20, 9),
-    TestCase(10, 1000, 257, 20, 9),
-    TestCase(10, 1001, 175, 20, 9),
-    TestCase(100, 1000, 989136573),
-    TestCase(100, 10**6, UNKNOWN),
-    TestCase(1000, 10000, 204600045),
-    TestCase(1000, 100000, 803889757),
-    # require too much memory atm
-    TestCase(1000, 1000000, UNKNOWN),
-    #TestCase(a, b, "UNKNOWN"),
+TestCase(5, 3, 21),
+TestCase(5, 10, 19, 3, 4),
+TestCase(10, 100, 257, 20, 9),
+TestCase(10, 101, 175, 20, 9),
+TestCase(10, 1000, 257, 20, 9),
+TestCase(10, 1001, 175, 20, 9),
+TestCase(100, 1000, 989136573),
+TestCase(100, 10**6, UNKNOWN),
+TestCase(1000, 10000, 204600045),
+TestCase(1000, 100000, 803889757),
+# require too much memory atm
+TestCase(1000, 1000000, UNKNOWN),
+#TestCase(a, b, "UNKNOWN"),
 ]
 
 # Constants
@@ -87,6 +89,29 @@ def nextList(currList):
     nextE.sort()
     nextList.append(nextE)
     return nextList
+
+def printTestResult(tc, result):
+    PATH_COLOR = Fore.RED
+    RESET_COLOR = Style.RESET_ALL
+
+    expected = tc.expected
+    numIters = tc.numIters
+    ans = result.expected
+    if expected == UNKNOWN:
+        successStr = UNKNOWN
+        b = Back.YELLOW
+        c = Fore.RED
+    elif ans == expected:
+        successStr = "SUCCESS"
+        b = Back.GREEN
+        c = Fore.RED
+    else:
+        successStr = f"FAILURE (expected {expected})"
+        b = Back.RED
+        c = Fore.YELLOW
+    logInfo(f"{c}{b} Result for {tc.N} after {numIters} rounds: {successStr} {RESET_COLOR}")
+    logInfo(f"  Expected: {tc.expected:10} (period len {tc.period:7} starting at {tc.periodStart}")
+    logInfo(f"  Actual:   {result.expected:10} (period len {result.period:7} starting at {result.periodStart}")
 
 def runFactorShuffle(n, numIters):
     logInfo(f"Running for n = {n}, {numIters} rounds:")
@@ -141,15 +166,10 @@ def runTests():
         logInfo(f"Running against N = {N}")
 
         ansBeforeMod, period, periodStart = runFactorShuffle(N, numIters)
-        logInfo(f"period(n = {N:6d}) = {period:6} (starts at {periodStart:6}) (final sum after {numIters} rounds: {ansBeforeMod}")
+        logInfo(f"period(n = {N:7d}) = {period:7} (starts at {periodStart:7}) (final sum after {numIters} rounds: {ansBeforeMod}")
         ans = ansBeforeMod % MOD
-        if ans == UNKNOWN:
-            successStr = UNKNOWN
-        elif ans == expected:
-            successStr = "SUCCESS"
-        else:
-            successStr = f"FAILURE (expected {expected})"
-        logInfo(f"Result for {N} after {numIters} rounds: {ans} - {successStr}")
+        result = TestCase(N, numIters, ans, period, periodStart)
+        printTestResult(test, result)
 
         endTime = getTimeInMillis()
         logTimeDiff = endTime - startTime
@@ -160,7 +180,9 @@ def troubleshoot():
     for n in range(3, 100):
         numIters = 10 ** 8
         finalSum, period, periodStart = runFactorShuffle(n, numIters)
-        logInfo(f"period(n = {n:6d}) = {period:6d} (starts at {periodStart:6}) (final sum after {numIters} rounds: {finalSum}")
+        logInfo(f"period(n = {n:7d}) = {period:7d} (starts at {periodStart:7}) (final sum after {numIters} rounds: {finalSum}")
+        ans = finalSum % MOD
+        logInfo(f"TestCase({n}, {numIters}, {ans}, {period}, {periodStart}),")
 
 # Main logic
 def main():
