@@ -187,7 +187,11 @@ def runFactorShuffle(n, numIters):
     for i in range(1, numIters+1):
         currList = nextList(currList)
         logList(currList, i)
-        currTuple = tuple(tuple(e) for e in currList)
+        currTuple = tuple(tuple(e) for e in sorted(currList))
+
+        if i % (10 ** 5) == 0:
+            logInfo(f"At step {i}")
+
         prevIndex = seenToIndexMap[currTuple]
         if prevIndex:
             periodStart = prevIndex
