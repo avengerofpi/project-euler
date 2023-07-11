@@ -11,7 +11,65 @@ import time
 #pip3 install primefac
 from primefac import primefac
 from colorama import Fore, Back, Style
+from copy import deepcopy
 #print(f"{Fore.GREEN}hello{Fore.RED}World{ansi.Style.RESET_ALL}")
+
+"""
+TODO:
+    We don't care about the order of the numbers/factor lists, and much of the structure
+    of the looping revolves just around the frequency distribution of the lengths of the
+    factor lists. For example, we can take
+        [[2,3,5], [2,2], [3], [5], [5,7,7,11]]
+    to
+        [3, 2, 1, 1, 4]
+    where each number represents the length of the factor list it replaces, and
+    then each round is just to, append a new number that is the length of the
+    list input to the current round (5 in this example), subtract one from each
+    of the numbers that was in the input list, and remove any such numbers that
+    are now zero (0):
+        [2, 1, 0, 0, 3, 5] -> [2, 1, 3, 5]
+    We loose the abilty to compute the sum of the original entries, but it will be
+    faster to find a period. A period of this reduced form must divide a period of
+    the original form (proof?). We can further reduce this to just counting the
+    frequency of each length, { length: frequency }
+        {
+            1: 2,
+            2: 1,
+            3: 1,
+            4: 1,
+        }
+    Then the round is to subtract 1 from each of the keys, removing new key zero (0)
+    if it exists, sum up the origal values (2 + 1 + 1 + 1 = 5), which is used as a key
+    to insert into the map (or increment if the value already existed, after the first
+    step):
+        {
+            1: 1,
+            2: 1,
+            3: 1,
+            5: 1,
+        },
+        {
+            1: 1,
+            2: 1,
+            4: 2,
+        },
+        {
+            1: 1,
+            3: 2,
+            4: 1,
+        },
+        {
+            2: 2,
+            3: 1,
+            4: 1,
+        },
+        {
+            1: 2,
+            2: 1,
+            3: 1,
+            4: 1,
+        },
+"""
 
 # Tests
 UNKNOWN = "UNKNOWN"
@@ -27,12 +85,12 @@ TESTS = [
 TestCase(5, 3, 21),
 TestCase(5, 10, 19, 3, 4),
 TestCase(10, 100, 257, 20, 9),
-#TestCase(10, 101, 175, 20, 9),
-#TestCase(10, 1000, 257, 20, 9),
-#TestCase(10, 1001, 175, 20, 9),
-#TestCase(100, 1000, 989136573),
-TestCase(100, 10**3, UNKNOWN),
-TestCase(100, 10**3, 1),
+TestCase(10, 101, 175, 20, 9),
+TestCase(10, 1000, 257, 20, 9),
+TestCase(10, 1001, 175, 20, 9),
+TestCase(100, 1000, 989136573),
+#TestCase(100, 10**3, UNKNOWN), # test error
+#TestCase(100, 10**3, 1), # test error
 #TestCase(100, 10**6, UNKNOWN),
 #TestCase(1000, 10000, 204600045),
 #TestCase(1000, 100000, 803889757),
@@ -127,12 +185,13 @@ def getTimeInMillis():
     return int(time.time() * 1000)
 
 # Functions
-def logList(currList, iterNum):
-    width = 3
-    logDebug(f"  {iterNum:{width}d}: {transformFactoredListIntoProductList(currList)}")
+def logList(currList, iterNum, logger = logDebug):
+    width = 5
+    logger(f"  {iterNum:{width}d}: {currList}")
+    logger(f"  {iterNum:{width}d}: {transformFactoredListIntoProductList(currList)} (productized)")
     for e in currList:
-        v = prod(e)
-        logVerbose(f" {' ' * width}... {e}")
+        #v = prod(e)
+        logger(f" {' ' * width}... {e}")
 
 def transformFactoredListIntoProductList(currList):
     return [prod(e) for e in currList]
@@ -153,6 +212,13 @@ def nextList(currList):
     nextList.append(nextE)
     return nextList
 
+def logValueMap(valueMap, logger = logVerbose):
+    #logger(f"IndexToValueMap:")
+    for i in sorted(valueMap.keys()):
+        v = valueMap[i]
+        logger(f"  {i}: {v}")
+        #logger(f"  {i:5}: {v:5}")
+
 def printTestResult(tc, result):
     PATH_COLOR = Fore.RED
     RESET_COLOR = Style.RESET_ALL
@@ -169,21 +235,72 @@ def printTestResult(tc, result):
         b = Back.GREEN
         c = Fore.RED
     else:
-        successStr = f"FAILURE (expected {expected})"
+        successStr = f"FAILURE (expected {expected} but got {ans})"
         b = Back.RED
         c = Fore.YELLOW
     logInfo(f"{c}{b} Result for {tc.N} after {numIters} rounds: {successStr} {RESET_COLOR}")
     logInfo(f"  Expected: {tc.expected:10} (period len {tc.period:7} starting at {tc.periodStart}")
     logInfo(f"  Actual:   {result.expected:10} (period len {result.period:7} starting at {result.periodStart}")
 
+def toDenatured(inputList):
+    """
+    Transform input list to symbols. E.g.,
+        [ [2], [3], [2, 2], [5], [2, 3], [7], [2, 2, 2] ]
+    transforms into
+        [ [0], [1], [2, 3], [4], [5, 6], [7], [8, 9, 10] ]
+    and
+        {
+            0:2,
+            1:3,
+            2:2, 3:2,
+            4:5,
+            5:2, 6:3,
+            7:7,
+            8:2, 9:2, 10:2
+        }
+    """
+    logger = logDebug
+    symbolToValueMap = {}
+    valueToIndexListMap = defaultdict(list)
+    symbolToValueMapBeforeSore = {}
+    logger(f"toDenatured input:")
+    logList(inputList, -1, logger = logger)
+    for i in range(len(inputList)):
+        eIn = inputList[i]
+        for j in range(len(eIn)):
+            v = eIn[j]
+            valueToIndexListMap[v].append([i,j])
+    symbol = 0
+    #outputList = []
+    outputList = deepcopy(inputList)
+    values = sorted(valueToIndexListMap.keys())
+    for v in values:
+        # should already be in sorted order, by construction
+        indexList = valueToIndexListMap[v]
+        #for k in range(len(indexList)):
+        #    [i,j] = indexList[k]
+        for [i,j] in indexList:
+            outputList[i][j] = symbol
+            symbolToValueMap[symbol] = inputList[i][j]
+            symbol += 1
+    logger(f"valueToIndexListMap")
+    logValueMap(valueToIndexListMap)
+    logger(f"symbolToValueMap")
+    logValueMap(symbolToValueMap)
+    logger(f"toDenatured output:")
+    logList(outputList, -1, logger)
+    return outputList, symbolToValueMap
+
 def runFactorShuffle(n, numIters):
     logInfo(f"Running for n = {n}, {numIters} rounds:")
-    currList = transformRange(n)
-    logList(currList, 0)
+    origList = transformRange(n)
+    logList(origList, 0)
     # The first list will not be seen again, so don't bother adding it
     seenToIndexMap = defaultdict(int)
     period = UNKNOWN
     periodStart = UNKNOWN
+
+    currList, symbolToValueMap = toDenatured(origList)
     for i in range(1, numIters+1):
         currList = nextList(currList)
         logList(currList, i)
@@ -218,7 +335,12 @@ def runFactorShuffle(n, numIters):
             break
         else:
             seenToIndexMap[currTuple] = i
-    prodList = transformFactoredListIntoProductList(currList)
+    logVerbose(f"Final symbol list:")
+    logList(currList, numIters, logVerbose)
+    finalValueList = [[symbolToValueMap[i] for i in e] for e in currList]
+    logVerbose(f"Final value list:")
+    logList(finalValueList, numIters, logVerbose)
+    prodList = transformFactoredListIntoProductList(finalValueList)
     finalSum = sum(prodList)
     logInfo(f"S({n}, {numIters}) -> {prodList} -> {finalSum}")
 
