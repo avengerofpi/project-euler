@@ -31,6 +31,9 @@ TestCase(6, 283669),
 TestCase(7, 3038359),
 TestCase(8, 16777473),
 TestCase(12, 5737774),
+TestCase(2**50 * 3**8, 955927129),
+TestCase(2**50 * 3**9, 790653055),
+TestCase(2**50 * 3**8 * 5, 45088448),
 TestCase(8**12 * 12**8, UNKNOWN),
 ]
 
@@ -80,12 +83,6 @@ def xorProductUsingExpos(exposX, exposY):
         newExpos = { expoY + expoX for expoY in exposY }
         ret.symmetric_difference_update(newExpos)
         logDebug(f"Shift {expoX} -> {sorted(newExpos)} -> {sorted(ret)}")
-        #for newExpo in newExpos:
-        #    if newExpo in ret:
-        #        ret.remove(newExpo)
-        #    else:
-        #        ret.add(newExpo)
-        #    logDebug(f"  {}")
     return sorted(ret)
 
 def xorProduct(x, y):
@@ -114,34 +111,14 @@ def xorProduct(x, y):
     logDebug(f"  {bin(ret)[2:]:>{width}}")
     return ret
 
-def runXorPowers(n):
-    logDebug(f"Computing runXorPower for n = {n}:")
+def runXorPowersBasic(N):
+    logDebug(f"Computing runXorPower for N = {N}:")
     ret = 1
-    for i in range(n):
+    for i in range(N):
         ret = xorProduct(11, ret)
     return ret
 
-def runTests():
-    for test in TESTS:
-        startTime = getTimeInMillis()
-        N = test.N
-        expected = test.expected
-        logInfo(f"Running against N = {N}")
-
-        ansBeforeMod, period, periodStart = runXorPowers(N)
-        logInfo(f"period(n = {N:7d}) = {period:7} (starts at {periodStart:7}) (final sum after {numIters} rounds: {ansBeforeMod}")
-        ans = ansBeforeMod % MOD
-        result = TestCase(N, numIters, ans, period, periodStart)
-        printTestResult(test, result)
-
-        endTime = getTimeInMillis()
-        logTimeDiff = endTime - startTime
-        logTiming(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
-        logInfo()
-
-def troubleshoot(N):
-    logInfo(f"Running troubleshoot(N = {N})")
-
+def runXorPowersEfficient(N):
     binN = bin(N)[2:]
     lenBinN= len(binN)
     setBitsN = [i for i in range(lenBinN) if binN[lenBinN -1 - i] == '1']
@@ -186,9 +163,53 @@ def troubleshoot(N):
         ret = (ret + summand) % MOD
         logDebug(f"  -> current total: {ret}")
 
-    logDebug(ret)
-    logInfo(ret)
-    logInfo(f"TestCase({N}, {ret}),")
+    #logInfo(f"TestCase({N}, {ret}),")
+
+    return ret
+
+def printTestResult(tc, result):
+    PATH_COLOR = Fore.RED
+    RESET_COLOR = Style.RESET_ALL
+
+    expected = tc.expected
+    ans = result.expected
+    if expected == UNKNOWN:
+        successStr = UNKNOWN
+        b = Back.YELLOW
+        c = Fore.RED
+    elif ans == expected:
+        successStr = "SUCCESS"
+        b = Back.GREEN
+        c = Fore.RED
+    else:
+        successStr = f"FAILURE (expected {expected} but got {ans})"
+        b = Back.RED
+        c = Fore.YELLOW
+    logInfo(f"{c}{b} Result for {tc.N}: {successStr} {RESET_COLOR}")
+    logInfo(f"  Expected: {tc.expected:10}")
+    logInfo(f"  Actual:   {result.expected:10}")
+
+def runTest(test):
+    startTime = getTimeInMillis()
+
+    N = test.N
+    logInfo(f"Running against N = {N}")
+
+    ans = runXorPowersEfficient(N)
+    result = TestCase(N, ans)
+    printTestResult(test, result)
+
+    endTime = getTimeInMillis()
+    logTimeDiff = endTime - startTime
+    logTiming(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
+
+    logInfo()
+
+def runTests():
+    for test in TESTS:
+        runTest(test)
+
+def troubleshoot(N):
 
     # Double check, for small N
     if N < 10 ** 3:
@@ -217,12 +238,12 @@ def main():
     #troubleshoot2()
     #return
 
-    #for N in [8**12 * 12**8]:
-    for N in [1, 2, 3, 4, 5, 6, 7, 8, 12, 8**12 * 12**8]:
-        troubleshoot(N)
-        logInfo(f"{'-' * 50}")
-    #8**12 * 12**8
-    #runTests()
+    #for N in [1, 2, 3, 4, 5, 6, 7, 8, 12, 8**12 * 12**8]:
+    #    troubleshoot(N)
+    #    logInfo(f"{'-' * 50}")
+    #return
+
+    runTests()
 
 # Main logic
 if __name__ == '__main__':
