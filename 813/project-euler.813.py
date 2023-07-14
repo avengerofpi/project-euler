@@ -28,6 +28,9 @@ TestCase(2, 69),
 # wrong: 5021107
 # wrong: 779447732
 # wrong: 80380684
+# wrong: 335375497
+# wrong: 617013410
+# wrong: 527697869
 TestCase(8**12 * 12**8, UNKNOWN),
 ]
 
@@ -112,14 +115,10 @@ def xorProduct(x, y):
     return ret
 
 def runXorPowers(n):
-    if n < 1:
-        ret = 0
-    else:
-        logInfo(f"Running for n = {n}:")
-        ret = 11
-        for i in range(n):
-            ret = xorProduct(11, ret)
-
+    logInfo(f"Computing runXorPower for n = {n}:")
+    ret = 1
+    for i in range(n):
+        ret = xorProduct(11, ret)
     return ret
 
 def runTests():
@@ -140,13 +139,35 @@ def runTests():
         logTiming(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
         logInfo()
 
-def troubleshoot():
+def extractParts(N):
+    k = 0
+    q = N
+    while (q % 2 == 0):
+        k += 1
+        q = q // 2
+    if q == 1:
+        q = 0
+    return k, q
+
+def troubleshoot(N):
+    logInfo(f"Running troubleshoot(N = {N})")
     # 8**12 * 12**8 = 2**52 * 3**8
-    k = 52
-    k = 3
-    expo2s = [0, 2 << k, 3 * (2 << k)]
-    remainingIters = 3**8
-    remainingIters = 1
+    #N = 8**12 * 12**8
+    #N = 4
+    k, remainingIters = extractParts(N)
+    logInfo(f"k: {k}")
+    logInfo(f"remainingIters: {remainingIters}")
+
+    #k = 52
+    #remainingIters = 3**8
+
+    #k = 2
+    #remainingIters = 1
+
+    if k == 0 and N != 1:
+        expo2s = [0]
+    else:
+        expo2s = [0, 1 << k, 3 * (1 << k)]
     # TOO BIG - MEMORY ERRORS !!
     #ret = sum(2 << i for i in expo2s)
 
@@ -155,7 +176,9 @@ def troubleshoot():
     otherFactorBin = bin(otherFactor)[2:]
     lenOtherFactorBin = len(otherFactorBin)
     expoOthers = [i for i in range(lenOtherFactorBin) if otherFactorBin[lenOtherFactorBin -1 - i] == '1']
-    expoOthers = [1]
+
+    #expoOthers = [0]
+
     #logInfo(f"otherFactor: {otherFactor}")
     #logInfo(f"otherFactorBin: {otherFactorBin}")
     logInfo(f"expo2s {len(expo2s)}: {expo2s}")
@@ -166,14 +189,20 @@ def troubleshoot():
     logInfo(f"ansExpos {len(ansExpos)}: {ansExpos}")
     logInfo()
     if len(ansExpos) > 0:
-        maxPower = int(log2(max(ansExpos)))
+        maxExpo = max(ansExpos)
+        if maxExpo > 0:
+            maxPower = int(log2(maxExpo))
+        else:
+            maxPower = 0
     else:
         maxPower = 0
-    exponentsToModValueMap = { 0: 1, 1: 2 }
+    #exponentsToModValueMap = { 0: 1, 1: 2 }
+    exponentsToModValueMap = { 0: 2, 1: 4 }
     power = 2
-    for i in range(2, maxPower+1):
-        #power = (power * power) % MOD
-        power = (2 * power) % MOD
+    #for i in range(2, maxPower+1):
+    for i in range(1, maxPower+1):
+        power = (power * power) % MOD
+        #power = (2 * power) % MOD
         exponentsToModValueMap[i] = power
     
     logInfo(f"exponentsToModValueMap:")
@@ -182,7 +211,7 @@ def troubleshoot():
 
     ret = 0
     for expo in ansExpos:
-        logInfo(f"Hanlding expo {expo}")
+        logInfo(f"Handling expo {expo}")
         expoBin = bin(expo)[2:]
         logInfo(f"  -> bin: {expoBin}")
         lenExpoBin = len(expoBin)
@@ -198,10 +227,22 @@ def troubleshoot():
     #    ret = xorProduct(ret, 11)
     logInfo(ret)
     logInfo(ret % MOD)
+    logInfo(bin(ret % MOD))
+
+    # Double check, for small N
+    if N < 10 ** 3:
+        ans = runXorPowers(N)
+        logInfo(ans)
+        logInfo(ans % MOD)
+        logInfo(bin(ans % MOD))
 
 # Main logic
 def main():
-    troubleshoot()
+    #for N in [8**12 * 12**8]:
+    for N in [1, 2, 3, 4, 5, 6, 7, 8, 12]:
+        troubleshoot(N)
+        logInfo(f"{'-' * 50}")
+    #8**12 * 12**8
     #runTests()
 
 # Main logic
