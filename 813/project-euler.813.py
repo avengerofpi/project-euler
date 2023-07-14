@@ -1,5 +1,23 @@
 #!/usr/bin/python3
 
+"""
+Observe that xorPowers is commutative, associative, and the following:
+  P(a + b) = P(a) (X) P(b)
+  P(2**k) = 1 + 2**(2**k) + 2**(3 * 2**k)
+For example,
+  P(1) =       11 = 0b                     1011
+  P(2) =       69 = 0b                  1000101
+  P(4) =      743 = 0b            1000000010001
+  P(8) = 16777473 = 0b1000000000000000100000001
+In the following code, we focus on using exponents/set bits, rather than
+full numbers, since we are working with numbers that are sparse / have low
+popcount (number of set bits in base 2).
+
+So we can compute, e.g.,
+  P(81) = P(64 + 16 + 1) = P(64) (X) P(16) (X) P(1)
+and we can do this efficiently with the exponents
+"""
+
 # Imports
 from math import log, log2, log10, prod, sqrt
 from collections import defaultdict
@@ -31,6 +49,7 @@ TestCase(6, 283669),
 TestCase(7, 3038359),
 TestCase(8, 16777473),
 TestCase(12, 5737774),
+TestCase(81, 793162484),
 TestCase(2**50 * 3**8, 955927129),
 TestCase(2**50 * 3**9, 790653055),
 TestCase(2**50 * 3**8 * 5, 45088448),
@@ -63,17 +82,34 @@ def getTimeInMillis():
 
 # Functions
 def toBinaryList(x):
+    """
+    e.g., 23 -> 0b10111 -> ['1', '1', '1', '0', '1']
+    """
     ret = list(bin(x)[2:])
     logVerbose(f"toBinaryList({x}) = {ret}")
     return ret
 
 def toReverseBinaryList(x):
+    """
+    e.g., 23 -> 0b10111 -> ['1', '1', '1', '0', '1'] --(reverse)--> ['1', '0', '1', '1', '1']
+    """
     bList = toBinaryList(x)
     bList.reverse()
     logVerbose(f"toReverseBinaryList({x}) = {bList}")
     return bList
 
+def getSetBits(N):
+    """
+    e.g., 23 -> 0b10111 -> [0, 1, 2, 4]
+    """
+    binN = bin(N)[2:]
+    lenBinN= len(binN)
+    return [i for i in range(lenBinN) if binN[lenBinN -1 - i] == '1']
+
 def xorProductUsingExpos(exposX, exposY):
+    """
+    Use symmetric differences between expo sets as analog to binary XOR.
+    """
     logDebug(f"Computing xorProductUsingExpos(x, y)")
     logDebug(f"  x = {exposX}")
     logDebug(f"  y = {exposY}")
@@ -88,16 +124,13 @@ def xorProductUsingExpos(exposX, exposY):
 def xorProduct(x, y):
     xRevBinList = toReverseBinaryList(x)
     yRevBinList = toReverseBinaryList(y)
-    yBin = bin(y)[2:]
-    logVerbose(f"xRevBinList = {xRevBinList}")
-    logVerbose(f"yRevBinList = {yRevBinList}")
+
     xLen = len(xRevBinList)
     yLen = len(yRevBinList)
-    logVerbose(f"xLen: {xLen}")
-    logVerbose(f"yLen: {yLen}")
+
     width = xLen + yLen
     shiftList = [i for i in range(xLen) if xRevBinList[i] == '1']
-    logVerbose(f"ShiftList: {shiftList}")
+
     ret = 0
     logDebug(f"Computing xorProduct({x}, {y})")
     logDebug(f"  x = {x} = {bin(x)}")
@@ -118,29 +151,46 @@ def runXorPowersBasic(N):
         ret = xorProduct(11, ret)
     return ret
 
-def runXorPowersEfficient(N):
-    binN = bin(N)[2:]
-    lenBinN= len(binN)
-    setBitsN = [i for i in range(lenBinN) if binN[lenBinN -1 - i] == '1']
-
-    ansExpos = [0]
-    for k in setBitsN:
-        expos = [0, 1 << k, 3 * (1 << k)]
-        logDebug(f"Expos for bit {k}: {expos}")
-        ansExpos = xorProductUsingExpos(ansExpos, expos)
-
-    logDebug(f"ansExpos {len(ansExpos)}: {ansExpos}")
+def computeXorProductSetBitsFromInputSetBits(setBits):
+    """
+    Based on
+        P(a + b) = P(a) (X) P(b)
+        P(2**k) = 1 + 2**(2**k) + 2**(3 * 2**k)
+    So, for example,
+        P(81) = P(64 + 16 + 1) = P(64) (X) P(16) (X) P(1)
+    The set bits are [0, 4, 6], leading to exponent index lists
+        0 -> [0,  1,   3]
+        4 -> [0, 16,  48]
+        6 -> [0, 64, 192]
+    """
+    ansSetBits = [0]
+    for k in setBits:
+        xorProductSetBits = [0, 1 << k, 3 * (1 << k)]
+        logDebug(f"xorProductSetBits for bit {k}: {xorProductSetBits}")
+        ansSetBits = xorProductUsingExpos(ansSetBits, xorProductSetBits)
+    logDebug(f"ansSetBits (length {len(ansSetBits)}): {ansSetBits}")
     logDebug()
-    if len(ansExpos) > 0:
-        maxExpo = max(ansExpos)
+    return ansSetBits
+
+def computeExponentsToModValueMap(expos):
+    """
+    Values of 2**(2**k) mod (10**9 + 7)
+    e.g.
+        k: value
+        0: 2
+        1: 4
+        2: 16
+        3: 256
+        ...
+        10: 812734592
+    """
+    maxPower = 0
+    if len(expos) > 0:
+        maxExpo = max(expos)
         if maxExpo > 0:
             maxPower = int(log2(maxExpo))
-        else:
-            maxPower = 0
-    else:
-        maxPower = 0
 
-    exponentsToModValueMap = { 0: 2, 1: 4 }
+    exponentsToModValueMap = { 0: 2 }
     power = 2
     for i in range(1, maxPower+1):
         power = (power * power) % MOD
@@ -150,8 +200,12 @@ def runXorPowersEfficient(N):
     for k,v in sorted(exponentsToModValueMap.items()):
         logDebug(f"  {k:>2}: {v}")
 
+    return exponentsToModValueMap
+
+def computeModValueFromSetBits(ansSetBits):
+    exponentsToModValueMap = computeExponentsToModValueMap(ansSetBits)
     ret = 0
-    for expo in ansExpos:
+    for expo in ansSetBits:
         logDebug(f"Handling expo {expo}")
         expoBin = bin(expo)[2:]
         logDebug(f"  -> bin: {expoBin}")
@@ -162,10 +216,12 @@ def runXorPowersEfficient(N):
         logDebug(f"  -> increment summard: {summand}")
         ret = (ret + summand) % MOD
         logDebug(f"  -> current total: {ret}")
-
-    #logInfo(f"TestCase({N}, {ret}),")
-
     return ret
+
+def runXorPowersEfficiently(N):
+    inputSetBits = getSetBits(N)
+    ansSetBits = computeXorProductSetBitsFromInputSetBits(inputSetBits)
+    return computeModValueFromSetBits(ansSetBits)
 
 def printTestResult(tc, result):
     PATH_COLOR = Fore.RED
@@ -194,8 +250,7 @@ def runTest(test):
 
     N = test.N
     logInfo(f"Running against N = {N}")
-
-    ans = runXorPowersEfficient(N)
+    ans = runXorPowersEfficiently(N)
     result = TestCase(N, ans)
     printTestResult(test, result)
 
@@ -203,20 +258,17 @@ def runTest(test):
     logTimeDiff = endTime - startTime
     logTiming(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
 
-    logInfo()
+    logInfo(f"{'-' * 60}")
 
 def runTests():
     for test in TESTS:
         runTest(test)
 
 def troubleshoot(N):
-
-    # Double check, for small N
-    if N < 10 ** 3:
-        ans = runXorPowers(N)
-        logDebug(ans)
-        logDebug(ans % MOD)
-        logDebug(bin(ans % MOD))
+    ans = runXorPowers(N)
+    logDebug(ans)
+    logDebug(ans % MOD)
+    logDebug(bin(ans % MOD))
 
 def troubleshoot2():
     logInfo()
@@ -235,14 +287,8 @@ def troubleshoot2():
 
 # Main logic
 def main():
+    #troubleshoot()
     #troubleshoot2()
-    #return
-
-    #for N in [1, 2, 3, 4, 5, 6, 7, 8, 12, 8**12 * 12**8]:
-    #    troubleshoot(N)
-    #    logInfo(f"{'-' * 50}")
-    #return
-
     runTests()
 
 # Main logic
