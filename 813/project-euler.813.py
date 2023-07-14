@@ -22,15 +22,15 @@ class TestCase:
         self.expected = expected
 
 TESTS = [
+TestCase(1, 11),
 TestCase(2, 69),
-# 8**12 * 12**8 = 2**52 * 3**8
-# wrong: 817937001
-# wrong: 5021107
-# wrong: 779447732
-# wrong: 80380684
-# wrong: 335375497
-# wrong: 617013410
-# wrong: 527697869
+TestCase(3, 743),
+TestCase(4, 4113),
+TestCase(5, 45243),
+TestCase(6, 283669),
+TestCase(7, 3038359),
+TestCase(8, 16777473),
+TestCase(12, 5737774),
 TestCase(8**12 * 12**8, UNKNOWN),
 ]
 
@@ -80,7 +80,7 @@ def xorProductUsingExpos(exposX, exposY):
         newExpos = { expoY + expoX for expoY in exposY }
         ret.symmetric_difference_update(newExpos)
         logDebug(f"Shift {expoX} -> {sorted(newExpos)} -> {sorted(ret)}")
-        #for newExpo in newExpos: 
+        #for newExpo in newExpos:
         #    if newExpo in ret:
         #        ret.remove(newExpo)
         #    else:
@@ -115,7 +115,7 @@ def xorProduct(x, y):
     return ret
 
 def runXorPowers(n):
-    logInfo(f"Computing runXorPower for n = {n}:")
+    logDebug(f"Computing runXorPower for n = {n}:")
     ret = 1
     for i in range(n):
         ret = xorProduct(11, ret)
@@ -139,55 +139,21 @@ def runTests():
         logTiming(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
         logInfo()
 
-def extractParts(N):
-    k = 0
-    q = N
-    while (q % 2 == 0):
-        k += 1
-        q = q // 2
-    if q == 1:
-        q = 0
-    return k, q
-
 def troubleshoot(N):
     logInfo(f"Running troubleshoot(N = {N})")
-    # 8**12 * 12**8 = 2**52 * 3**8
-    #N = 8**12 * 12**8
-    #N = 4
-    k, remainingIters = extractParts(N)
-    logInfo(f"k: {k}")
-    logInfo(f"remainingIters: {remainingIters}")
 
-    #k = 52
-    #remainingIters = 3**8
+    binN = bin(N)[2:]
+    lenBinN= len(binN)
+    setBitsN = [i for i in range(lenBinN) if binN[lenBinN -1 - i] == '1']
 
-    #k = 2
-    #remainingIters = 1
+    ansExpos = [0]
+    for k in setBitsN:
+        expos = [0, 1 << k, 3 * (1 << k)]
+        logDebug(f"Expos for bit {k}: {expos}")
+        ansExpos = xorProductUsingExpos(ansExpos, expos)
 
-    if k == 0 and N != 1:
-        expo2s = [0]
-    else:
-        expo2s = [0, 1 << k, 3 * (1 << k)]
-    # TOO BIG - MEMORY ERRORS !!
-    #ret = sum(2 << i for i in expo2s)
-
-    # reverse it?
-    otherFactor = runXorPowers(remainingIters)
-    otherFactorBin = bin(otherFactor)[2:]
-    lenOtherFactorBin = len(otherFactorBin)
-    expoOthers = [i for i in range(lenOtherFactorBin) if otherFactorBin[lenOtherFactorBin -1 - i] == '1']
-
-    #expoOthers = [0]
-
-    #logInfo(f"otherFactor: {otherFactor}")
-    #logInfo(f"otherFactorBin: {otherFactorBin}")
-    logInfo(f"expo2s {len(expo2s)}: {expo2s}")
-    logInfo()
-    logInfo(f"expoOthers {len(expoOthers)}: {expoOthers}")
-    logInfo()
-    ansExpos = xorProductUsingExpos(expo2s, expoOthers)
-    logInfo(f"ansExpos {len(ansExpos)}: {ansExpos}")
-    logInfo()
+    logDebug(f"ansExpos {len(ansExpos)}: {ansExpos}")
+    logDebug()
     if len(ansExpos) > 0:
         maxExpo = max(ansExpos)
         if maxExpo > 0:
@@ -196,50 +162,63 @@ def troubleshoot(N):
             maxPower = 0
     else:
         maxPower = 0
-    #exponentsToModValueMap = { 0: 1, 1: 2 }
+
     exponentsToModValueMap = { 0: 2, 1: 4 }
     power = 2
-    #for i in range(2, maxPower+1):
     for i in range(1, maxPower+1):
         power = (power * power) % MOD
-        #power = (2 * power) % MOD
         exponentsToModValueMap[i] = power
-    
-    logInfo(f"exponentsToModValueMap:")
+
+    logDebug(f"exponentsToModValueMap:")
     for k,v in sorted(exponentsToModValueMap.items()):
-        logInfo(f"  {k:>2}: {v}")
+        logDebug(f"  {k:>2}: {v}")
 
     ret = 0
     for expo in ansExpos:
-        logInfo(f"Handling expo {expo}")
+        logDebug(f"Handling expo {expo}")
         expoBin = bin(expo)[2:]
-        logInfo(f"  -> bin: {expoBin}")
+        logDebug(f"  -> bin: {expoBin}")
         lenExpoBin = len(expoBin)
         expoExpos = [i for i in range(lenExpoBin) if expoBin[lenExpoBin - 1 - i] == '1']
-        logInfo(f"  -> set bit indices: {expoExpos}")
+        logDebug(f"  -> set bit indices: {expoExpos}")
         summand = prod(exponentsToModValueMap[i] for i in expoExpos) % MOD
-        logInfo(f"  -> increment summard: {summand}")
+        logDebug(f"  -> increment summard: {summand}")
         ret = (ret + summand) % MOD
-        logInfo(f"  -> current total: {ret}")
+        logDebug(f"  -> current total: {ret}")
 
-    #for i in range(remainingIters):
-    #    #ret = xorProduct(11, ret)
-    #    ret = xorProduct(ret, 11)
+    logDebug(ret)
     logInfo(ret)
-    logInfo(ret % MOD)
-    logInfo(bin(ret % MOD))
+    logInfo(f"TestCase({N}, {ret}),")
 
     # Double check, for small N
     if N < 10 ** 3:
         ans = runXorPowers(N)
-        logInfo(ans)
-        logInfo(ans % MOD)
-        logInfo(bin(ans % MOD))
+        logDebug(ans)
+        logDebug(ans % MOD)
+        logDebug(bin(ans % MOD))
+
+def troubleshoot2():
+    logInfo()
+
+    ans = runXorPowers(81)
+    logInfo(f"ans:  {ans}")
+
+    b1 = runXorPowers(64)
+    b2 = runXorPowers(16)
+    b3 = runXorPowers(1)
+    bAns = xorProduct(xorProduct(b1, b2), b3)
+    logInfo(f"  b1: {bin(b1)}")
+    logInfo(f"  b2: {bin(b2)}")
+    logInfo(f"  b3: {bin(b3)}")
+    logInfo(f"bAns: {bAns}")
 
 # Main logic
 def main():
+    #troubleshoot2()
+    #return
+
     #for N in [8**12 * 12**8]:
-    for N in [1, 2, 3, 4, 5, 6, 7, 8, 12]:
+    for N in [1, 2, 3, 4, 5, 6, 7, 8, 12, 8**12 * 12**8]:
         troubleshoot(N)
         logInfo(f"{'-' * 50}")
     #8**12 * 12**8
