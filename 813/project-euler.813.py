@@ -53,6 +53,8 @@ TestCase(81, 793162484),
 TestCase(2**50 * 3**8, 955927129),
 TestCase(2**50 * 3**9, 790653055),
 TestCase(2**50 * 3**8 * 5, 45088448),
+# addition between powers of two and other factor, rather than multiplication
+TestCase(2**52 + 3**8, 527697869),
 TestCase(8**12 * 12**8, UNKNOWN),
 ]
 
