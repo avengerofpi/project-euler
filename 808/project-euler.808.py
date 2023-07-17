@@ -1,28 +1,39 @@
 #!/usr/bin/python3
 
 # Imports
-from math import log, log10, prod, sqrt
+from math import log, log2, log10, prod, sqrt
 from collections import defaultdict
+import scipy
+import numpy
+from numpy import array
 from datetime import timedelta
 import time
+#pip3 install primefac
+from primefac import primefac
+from colorama import Fore, Back, Style
+from copy import deepcopy
+#print(f"{Fore.GREEN}hello{Fore.RED}World{ansi.Style.RESET_ALL}")
 
 # Constants
 class TestCase:
-    def __init__(self, N, expected):
+    def __init__(self, N, expected, primeBound, primesFilename = None):
         self.N = N
         self.expected = expected
+        self.primeBound = primeBound
+        self.primesFilename = primesFilename
 
 UNKNOWN = "UNKNOWN"
 TESTS = [
-TestCase(10, 15633754),
-TestCase(20, 4116550636820),
-TestCase(50, UNKNOWN),
+TestCase(10, 15633754, 10**4),
+TestCase(20, 4116550636820, 10**7),
+TestCase(50, UNKNOWN, None, "../primes/primes-up-to-100million.txt"),
 ]
 
 # Logging 
 info = True
-debug = True
+debug = False
 verbose = False
+timing = True
 def logInfo(msg = ""):
     if info:
         print(msg, flush=True)
@@ -31,6 +42,9 @@ def logDebug(msg = ""):
         print(msg, flush=True)
 def logVerbose(msg = ""):
     if verbose:
+        print(msg, flush=True)
+def logTiming(msg = ""):
+    if timing:
         print(msg, flush=True)
 
 def getTimeInMillis():
@@ -43,6 +57,7 @@ def computePrimesUpToN(N):
     value `N`, returning the collection as some collection object.
     This is a simple seive generator, nothing fancy.
     """
+    logDebug(f"Computing primes up to {N}")
     primes = []
     checkPrimesI = 0
     if N >= 2:
@@ -52,65 +67,66 @@ def computePrimesUpToN(N):
                 checkPrimesI += 1
             if all(candidateP % p != 0 for p in primes[0:checkPrimesI + 1]):
                 primes.append(candidateP)
-    return tuple(primes)
+    logDebug(f"Computing primes up to {N} - found {len(primes)} from {primes[0]} to {primes[-1]}")
+    return primes
 
-def getPrimes():
+def getPrimesFromFile(filename):
+    logDebug(f"Getting primes from file: '{filename}'")
     #filename = "../primes/primes-up-to-10000.txt"
     #filename = "../primes/primes-up-to-1million.txt"
     #filename = "../primes/primes-up-to-20million.txt"
-    filename = "../primes/primes-up-to-100million.txt"
-    #filename = "../primes/primes-up-to-1billion.txt"
+    #filename = "../primes/primes-up-to-100million.txt"
 
     with open(filename) as f:
         return [int(line) for line in f.readlines()]
-    """
-    validStartsAndStops = ['1', '9']
-    with open(filename) as f:
-        while not f.closed:
-            try:
-                p = int(f.readline())
-            except:
-                # handle end of file
-                break
-            p2 = p**2
 
-            p2list = list(str(p2))
-            p2listRev = reversed(p2list)
-            if p2listRev == p2list:
-                logDebug(f"Skipping {p} -> {p2} (palindrome)")
-                continue
-            if p2list[0] not in validStartsAndStops:
-                logDebug(f"Skipping {p} -> {p2} (first char must be in {validStartsAndStops})")
-                continue
-            if p2list[-1] not in validStartsAndStops:
-                logDebug(f"Skipping {p} -> {p2} (last char must be in {validStartsAndStops})")
-                continue
+def printTestResult(tc, result):
+    PATH_COLOR = Fore.RED
+    RESET_COLOR = Style.RESET_ALL
 
-            p2rev = int("".join(p2listRev))
-            pRev = int(sqrt(p2rev))
-            if pRev**2 != p2rev:
-                logInfo(f"Error: working with values that may be too large for math.sqrt to be accurate enough")
-                logInfo(f"  {p2Rev} --(sqrt)--> {pRev} --(squared)--> {pRev**2} != {p2rev}")
-                break
-    """
+    expected = tc.expected
+    ans = result.expected
+    if expected == UNKNOWN:
+        successStr = UNKNOWN
+        b = Back.YELLOW
+        c = Fore.RED
+    elif ans == expected:
+        successStr = "SUCCESS"
+        b = Back.GREEN
+        c = Fore.RED
+    else:
+        successStr = f"FAILURE (expected {expected} but got {ans})"
+        b = Back.RED
+        c = Fore.YELLOW
+    logInfo(f"{c}{b} Result for {tc.N}: {successStr} {RESET_COLOR}")
+    logInfo(f"  Expected: {tc.expected:10}")
+    logInfo(f"  Actual:   {result.expected:10}")
 
 def runTest(test):
     startTime = getTimeInMillis()
     
     N = test.N
     expected = test.expected
+    primeBound = test.primeBound
+    primesFilename = test.primesFilename
 
     logInfo(f"Running against N = {N}")
 
-    #primes = computePrimesUpToN(10**7)
-    primes = set(getPrimes())
+    if primesFilename:
+        primes = getPrimesFromFile(primesFilename)
+    elif primeBound:
+        primes = computePrimesUpToN(primeBound)
+    else:
+        logInfo("ERROR: Neither primeBound ({primeBound}) nor primesFilename ({primesFilename}) is valid. Cannot determine list of prime to work with.")
+        primes = []
+
+    primes = set(primes)
+
     logInfo(f"{len(primes)} primes")
     logInfo(f"Max prime: {max(primes)}")
 
     validStartsAndStops = ['1', '9']
 
-    revSquarePrimes = set()
-    basePrimes = set()
     forwardSquares = set()
     reverseSquares = set()
     for p in sorted(primes):
@@ -130,22 +146,9 @@ def runTest(test):
 
         p2rev = int("".join(p2listRev))
         pRev = int(sqrt(p2rev) + 0.5)
-        #if pRev**2 != p2rev:
-        #    logInfo(f"Error: working with values that may be too large for math.sqrt to be accurate enough")
-        #    logInfo(f"  {p} -> {p2} -> {p2rev} --(sqrt)--> {pRev} --(squared)--> {pRev**2} != {p2rev}")
-        #    break
 
         forwardSquares.add(p2)
         reverseSquares.add(p2rev)
-
-        """
-        if pRev in primes:
-            logDebug(f"  {p:7} -> {p2:15} -> {p2rev:15} --(sqrt)--> {pRev:7} --(squared)--> {pRev**2:15}")
-            revSquarePrimes.add(p2)
-            revSquarePrimes.add(p2rev)
-            basePrimes.add(p)
-            basePrimes.add(pRev)
-        """
 
     revSquarePrimes = forwardSquares.intersection(reverseSquares)
 
@@ -153,15 +156,19 @@ def runTest(test):
     logInfo(f"Num rev square primes: {numRevSquarePrimes}")
     for p in sorted(revSquarePrimes):
         logInfo(f"  {p}")
-    for p in sorted(basePrimes):
-        p2 = p**2
-        if p2 in revSquarePrimes:
-            logDebug(f"  {p:7} -> {p**2:15}")
     if numRevSquarePrimes >= N:
         ans = sum(sorted(revSquarePrimes)[0:N])
     else:
         ans = f"Did not find enough reverse square primes. Need {N} but only found {numRevSquarePrimes}"
 
+    result = TestCase(N, ans, None)
+    printTestResult(test, result)
+
+    endTime = getTimeInMillis()
+    logTimeDiff = endTime - startTime
+    logTiming(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
+
+    logInfo(f"{'-' * 60}")
     logInfo(f"Ans: {ans}")
 
     """
@@ -185,9 +192,6 @@ def runTest(test):
 
 # Main logic
 def main():
-    #getPrimesUpToOneBillion()
-    #return
-
     for test in TESTS:
         runTest(test)
 
