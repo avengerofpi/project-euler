@@ -3,6 +3,10 @@
 # Imports
 from math import log, log2, log10, sqrt, gcd
 import scipy
+from datetime import timedelta
+import time
+from collections import defaultdict
+import itertools
 
 # Constants
 debug = True
@@ -37,11 +41,30 @@ TESTS = [
     #TestCase(40, "UNKNOWN"),
 ]
 
+PARTIALS_TESTS = [
+    TestCase(((0, 1), (0, 1), (0, 1), (0, 1)), "0.5214"), # unit square to itself
+    TestCase(((1, 2), (1, 2), (1, 2), (1, 2)), "0.5214"), # unit square (shifted)
+    TestCase(((0, 1), (0, 1), (1, 2), (0, 1)), "UNKNOWN"), # unit square to adjacent unit square (right)
+    TestCase(((0, 1), (0, 1), (0, 1), (1, 2)), "UNKNOWN"), # unit square to adjacent unit square (up)
+    TestCase(((0, 1), (0, 1), (1, 3), (0, 1)), "UNKNOWN"), # unit square to adjacent 2x square (right)
+]
 
-# Functions
-def logDebug(msg = "", flush=True):
+# Logging
+info = True
+debug = False
+verbose = False
+def logInfo(msg = ""):
+    if info:
+        print(msg, flush=True)
+def logDebug(msg = ""):
     if debug:
-        print(msg, flush=flush)
+        print(msg, flush=True)
+def logVerbose(msg = ""):
+    if verbose:
+        print(msg, flush=True)
+
+def getTimeInMillis():
+    return int(time.time() * 1000)
 
 def printLamina(n, a, b, w, h):
     INDENT = '  '
@@ -59,23 +82,12 @@ def printLamina(n, a, b, w, h):
     for r in range(b, 0, -1):
         logDebug(INDENT + FULL_LINE)
 
+# Functions
 def dist(x1, y1, x2, y2):
     return sqrt( (x2-x1)**2 + (y2-y1)**2 )
 
 def ONE(a, b, c, d):
     return 1
-
-#def expectedDist(w, h):
-#    return (v / ((w * h) ** 2) for v in scipy.integrate.nquad(dist, [[0, w], [0, h], [0, w], [0, h]]))
-
-#def expectedDist(w, h):
-#    return tuple(v / ((w * h) ** 2) for v in scipy.integrate.nquad(dist, [[0, w], [0, h], [0, w], [0, h]]))
-
-# expectedDist(1, 1)
-#  (0.5214054334820506, 1.4893564525019662e-08)
-
-# expectedDist(2, 3)
-# (1.317067450706075, 1.7435003632186453e-08)
 
 # n = 3
 # Use inclusion exclusion.
@@ -101,7 +113,6 @@ def manualCaseFor3():
     ) / 64
     logDebug(f"n = 3 (manual): {expected3}")
 
-
 """
 There are three partials per lamina, three integrals to compute as part of an
 inclusion-exclusion process to find the desired 'lamina-punctured integral.' They
@@ -123,16 +134,17 @@ def getPartial(a, b, c, d):
         "epsabs": 1.49e-10
     }
 
-    k = (a, b, c, d)
+    bounds = (a, b, c, d)
     v = 0
-    logDebug(f"Computing partial for {k}")
-    if k in memoizedPartials.keys():
+    logDebug(f"Computing partial for {bounds}")
+    if bounds in memoizedPartials.keys():
         logDebug(f"  Partial HAS been previously computed")
-        v = memoizedPartials[k]
+        v = memoizedPartials[bounds]
     else:
         logDebug(f"  Partial has NOT been previously computed")
-        v = scipy.integrate.nquad(dist, k, opts=options)[0]
-        memoizedPartials[k] = v
+        #v = scipy.integrate.nquad(ONE, bounds, opts=options)[0]
+        v = scipy.integrate.nquad(dist, bounds, opts=options)[0]
+        memoizedPartials[bounds] = v
     logDebug(f"  Value: {v}")
 
     return v
@@ -212,6 +224,7 @@ def expectedDistForSquareLamina(n, a, b, w, h):
 def sumExpectedDistForSquareLaminaeOfSizeN(n):
     logDebug(f"sumExpectedDistForSquareLaminaeOfSizeN({n})")
     total = 0
+    startTime = getTimeInMillis()
     for a in range(1, n-1):
         for w in range(1, n-a):
             for b in range(1, n-1):
@@ -227,8 +240,46 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
         expected = testCase.expected
         ansStr = f"{total:.4f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
-        logDebug(f"{n}: {ansStr} - {successStr}", flush=True)
+        logDebug(f"{n}: {ansStr} - {successStr}")
+    endTime = getTimeInMillis()
+    logTimeDiff = endTime - startTime
+    logDebug(f"  Time spent: {timedelta(milliseconds=logTimeDiff)} (for N = {n:>2})")
     return total
+
+def testPartials():
+    for test in PARTIALS_TESTS:
+        bounds = test.N
+        expected = test.expected
+
+        total = getPartial(*bounds)
+
+        ansStr = f"{total:.4f}"
+        successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
+        logDebug(f"{bounds}: {ansStr} - {successStr}")
+
+def runMain():
+    total = 0
+    minN = 3
+    maxN = 40
+    #for n in range(minN, maxN + 1):
+    startTime = getTimeInMillis()
+    for n in [3]:
+        total += sumExpectedDistForSquareLaminaeOfSizeN(n)
+        logDebug()
+        print(f"Running total for n from {minN} to {n}: {total}")
+        logDebug()
+        logDebug('-' * 50)
+        logDebug()
+    endTime = getTimeInMillis()
+    logTimeDiff = endTime - startTime
+    logDebug(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
+
+    logDebug()
+    logDebug('-' * 50)
+    logDebug('-' * 50)
+    logDebug()
+    print(f"Grand total for n from {minN} to {maxN}: {total}")
+    logDebug()
 
 def doSomeExperimentation():
     a = expectedDistForSquareLamina(3,1,1,1,1)
@@ -274,25 +325,88 @@ def doSomeExperimentation2():
         v = dd[k]
         print(f"{k} = {v}")
 
-def main():
+def doSomeExperimentation3():
+    """
+    unitSquareE = getPartial(*unitSquareBounds)
+    e = unitSquareE
+    e= 0.5214054334972098
+    e3 =(8*(e+0) +
+        16*(e+1) +
+        12*(e+2) +
+         8*(e+sqrt(2)) +
+        16*(e+sqrt(5)) +
+         4*(e+sqrt(8))) / 64
+    """
+    """
+    boundsToFreqMap = {
+        ((0,1), (0,1), (0,1), (0,1)):  8,
+        ((0,1), (0,1), (0,1), (1,2)): 16,
+        ((0,1), (0,1), (0,1), (2,3)): 12,
+        ((0,1), (0,1), (1,2), (1,2)):  8,
+        ((0,1), (0,1), (1,2), (2,3)): 16,
+        ((0,1), (0,1), (2,3), (2,3)):  4,
+    }
+    """
+
+    """
+    boundsToFreqMap = defaultdict(int)
+    N = 3
+    for t in itertools.product(range(N), range(N), range(N), range(N)):
+        (x1, y1, x2, y2) = t
+        #logInfo((x1, y1, x2, y2))
+        c1 = (x1, y1)
+        c2 = (x2, y2)
+        if c1 == (1,1) or c2 == (1,1):
+            #logInfo("  skipping")
+            continue
+        dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
+        bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
+        boundsToFreqMap[bounds] += 1
+    """
+    laminae = []
+    n = 4
     total = 0
-    minN = 3
-    maxN = 40
-    for n in range(minN, maxN + 1):
-        total += sumExpectedDistForSquareLaminaeOfSizeN(n)
-        logDebug()
-        print(f"Running total for n from {minN} to {n}: {total}")
-        logDebug()
-        logDebug('-' * 50)
-        logDebug()
-    logDebug()
-    logDebug('-' * 50)
-    logDebug('-' * 50)
-    logDebug()
-    print(f"Grand total for n from {minN} to {maxN}: {total}")
-    logDebug()
+    for a in range(1, n-1):
+        for w in range(1, n-a):
+            for b in range(1, n-1):
+                for h in range(1, n-b):
+                    laminae.append((n, a, b, w, h))
+                    #laminanae.append(n, a, b, w, h)
+    for lamina in laminae:
+        boundsToFreqMap = defaultdict(int)
+        n, a, b, w, h = lamina
+        for t in itertools.product(*itertools.repeat(range(n), 4)):
+            x1, y1, x2, y2 = t
+            #logInfo((x1, y1, x2, y2))
+            c1 = (x1, y1)
+            c2 = (x2, y2)
+            if ((a <= x1 and x1 <= a+w) and (b <= y1 and y1 <= b+h)) or ((a <= x2 and x2 <= a+w) and (b <= y2 and y2 <= b+h)):
+                #logInfo("  skipping")
+                continue
+            dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
+            bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
+            boundsToFreqMap[bounds] += 1
+
+        for bounds, freq in boundsToFreqMap.items():
+            e = getPartial(*bounds)
+            area = e * freq
+            #logInfo(f"{bounds} occurs {freq:>2} times -> {e:10.6f} -> {inc:10.6f}")
+            total += inc
+        e3 = total / 64
+    #"""
+
+
+    logInfo(f"N=3:")
+    logInfo(f"Actual:   {e3:6.4f} = {total:10.6} / {64}")
+    logInfo(f"Expected: {19.6564}")
+    return
+
+def main():
+    #runMain()
+    #testPartials()
 
     #doSomeExperimentation2()
+    doSomeExperimentation3()
 
 # Main logic
 if __name__ == '__main__':
