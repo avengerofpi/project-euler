@@ -362,50 +362,48 @@ def doSomeExperimentation3():
         bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
         boundsToFreqMap[bounds] += 1
     """
-    laminae = []
-    n = 4
-    total = 0
-    for a in range(1, n-1):
-        for w in range(1, n-a):
-            for b in range(1, n-1):
-                for h in range(1, n-b):
-                    laminae.append((n, a, b, w, h))
-                    #laminanae.append(n, a, b, w, h)
-    for lamina in laminae:
-        logDebug(f"lamina {lamina}")
-        printLamina(*lamina)
-        boundsToFreqMap = defaultdict(int)
-        n, a, b, w, h = lamina
-        for t in itertools.product(*itertools.repeat(range(n), 4)):
-            x1, y1, x2, y2 = t
-            #logInfo((x1, y1, x2, y2))
-            if ((a <= x1 and x1 <  a+w) and (b <= y1 and y1 <  b+h)) or ((a <= x2 and x2 <  a+w) and (b <= y2 and y2 <  b+h)):
-                logDebug(f"Skipping coors {(x1, y1), (x2, y2)}")
-                continue
-            dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
-            bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
-            boundsToFreqMap[bounds] += 1
-        #logDebug(f"
+    grandTotal = 0
+    for n in range(3, 40+1):
+        laminae = []
+        for a in range(1, n-1):
+            for w in range(1, n-a):
+                for b in range(1, n-1):
+                    for h in range(1, n-b):
+                        laminae.append((n, a, b, w, h))
+        total = 0
+        for lamina in laminae:
+            logDebug(f"lamina {lamina}")
+            printLamina(*lamina)
+            boundsToFreqMap = defaultdict(int)
+            n, a, b, w, h = lamina
+            for t in itertools.product(*itertools.repeat(range(n), 4)):
+                x1, y1, x2, y2 = t
+                if ((a <= x1 and x1 <  a+w) and (b <= y1 and y1 <  b+h)) or ((a <= x2 and x2 <  a+w) and (b <= y2 and y2 <  b+h)):
+                    logDebug(f"Skipping coors {(x1, y1), (x2, y2)}")
+                    continue
+                dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
+                bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
+                boundsToFreqMap[bounds] += 1
 
-        e = 0
-        for bounds, freq in sorted(boundsToFreqMap.items()):
-            area = getPartial(*bounds)
-            areaMultiplied = area * freq
-            logDebug(f"{bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
-            e += areaMultiplied
+            e = 0
+            for bounds, freq in sorted(boundsToFreqMap.items()):
+                area = getPartial(*bounds)
+                areaMultiplied = area * freq
+                logDebug(f"{bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
+                e += areaMultiplied
 
-        areaSquare = n ** 2
-        areaVoid = w * h
-        valueToDivideBy = (areaSquare - areaVoid) ** 2
-        inc = e / valueToDivideBy
-        logDebug(f"  lamina {lamina} -> {inc:10.6f}")
-        total += inc
-    #"""
+            areaSquare = n ** 2
+            areaVoid = w * h
+            valueToDivideBy = (areaSquare - areaVoid) ** 2
+            inc = e / valueToDivideBy
+            logDebug(f"  lamina {lamina} -> {inc:10.6f}")
+            total += inc
 
+        grandTotal += total
+        logInfo(f"N={n} -> {total:10.6f} -> {grandTotal:10.6f}")
 
-    logInfo(f"N=3:")
-    logInfo(f"Actual:   {total:10.6f}")
-    logInfo(f"Expected: {19.6564}")
+    logInfo(f"Grand total: {grandTotal:10.6f}")
+
     return
 
 def main():
