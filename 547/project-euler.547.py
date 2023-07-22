@@ -9,7 +9,6 @@ from collections import defaultdict
 import itertools
 
 # Constants
-debug = True
 class TestCase:
     def __init__(self, N, expected):
         self.N = N
@@ -138,10 +137,10 @@ def getPartial(a, b, c, d):
     v = 0
     logDebug(f"Computing partial for {bounds}")
     if bounds in memoizedPartials.keys():
-        logDebug(f"  Partial HAS been previously computed")
+        logVerbose(f"  Partial HAS been previously computed")
         v = memoizedPartials[bounds]
     else:
-        logDebug(f"  Partial has NOT been previously computed")
+        logVerbose(f"  Partial has NOT been previously computed")
         #v = scipy.integrate.nquad(ONE, bounds, opts=options)[0]
         v = scipy.integrate.nquad(dist, bounds, opts=options)[0]
         memoizedPartials[bounds] = v
@@ -373,31 +372,39 @@ def doSomeExperimentation3():
                     laminae.append((n, a, b, w, h))
                     #laminanae.append(n, a, b, w, h)
     for lamina in laminae:
+        logDebug(f"lamina {lamina}")
+        printLamina(*lamina)
         boundsToFreqMap = defaultdict(int)
         n, a, b, w, h = lamina
         for t in itertools.product(*itertools.repeat(range(n), 4)):
             x1, y1, x2, y2 = t
             #logInfo((x1, y1, x2, y2))
-            c1 = (x1, y1)
-            c2 = (x2, y2)
-            if ((a <= x1 and x1 <= a+w) and (b <= y1 and y1 <= b+h)) or ((a <= x2 and x2 <= a+w) and (b <= y2 and y2 <= b+h)):
-                #logInfo("  skipping")
+            if ((a <= x1 and x1 <  a+w) and (b <= y1 and y1 <  b+h)) or ((a <= x2 and x2 <  a+w) and (b <= y2 and y2 <  b+h)):
+                logDebug(f"Skipping coors {(x1, y1), (x2, y2)}")
                 continue
             dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
             bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
             boundsToFreqMap[bounds] += 1
+        #logDebug(f"
 
-        for bounds, freq in boundsToFreqMap.items():
-            e = getPartial(*bounds)
-            area = e * freq
-            #logInfo(f"{bounds} occurs {freq:>2} times -> {e:10.6f} -> {inc:10.6f}")
-            total += inc
-        e3 = total / 64
+        e = 0
+        for bounds, freq in sorted(boundsToFreqMap.items()):
+            area = getPartial(*bounds)
+            areaMultiplied = area * freq
+            logDebug(f"{bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
+            e += areaMultiplied
+
+        areaSquare = n ** 2
+        areaVoid = w * h
+        valueToDivideBy = (areaSquare - areaVoid) ** 2
+        inc = e / valueToDivideBy
+        logDebug(f"  lamina {lamina} -> {inc:10.6f}")
+        total += inc
     #"""
 
 
     logInfo(f"N=3:")
-    logInfo(f"Actual:   {e3:6.4f} = {total:10.6} / {64}")
+    logInfo(f"Actual:   {total:10.6f}")
     logInfo(f"Expected: {19.6564}")
     return
 
