@@ -36,16 +36,7 @@ TestCase(20, "313173.3515"), # "313173.3514525104"
 TestCase(21, "405866.3170"), # "405866.3169928597"
 TestCase(22, "519303.3456"), # "519303.34561997105"
 TestCase(23, "656784.9407"), # "656784.940706292"
-
 #TestCase(40, "UNKNOWN"),
-]
-
-PARTIALS_TESTS = [
-    TestCase(((0, 1), (0, 1), (0, 1), (0, 1)), "0.5214"), # unit square to itself
-    TestCase(((1, 2), (1, 2), (1, 2), (1, 2)), "0.5214"), # unit square (shifted)
-    TestCase(((0, 1), (0, 1), (1, 2), (0, 1)), "UNKNOWN"), # unit square to adjacent unit square (right)
-    TestCase(((0, 1), (0, 1), (0, 1), (1, 2)), "UNKNOWN"), # unit square to adjacent unit square (up)
-    TestCase(((0, 1), (0, 1), (1, 3), (0, 1)), "UNKNOWN"), # unit square to adjacent 2x square (right)
 ]
 
 # Logging
@@ -196,17 +187,6 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
     logDebug(f"  Time spent: {timedelta(milliseconds=logTimeDiff)} (for N = {n:>2})")
     return total
 
-def testPartials():
-    for test in PARTIALS_TESTS:
-        bounds = test.N
-        expected = test.expected
-
-        total = getPartial(*bounds)
-
-        ansStr = f"{total:.4f}"
-        successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
-        logDebug(f"{bounds}: {ansStr} - {successStr}")
-
 def runMain():
     total = 0
     minN = 3
@@ -336,7 +316,6 @@ def doSomeExperimentation_breakIntoUnitSquares():
 
 def main():
     runMain()
-    #testPartials()
 
     #doSomeExperimentation_equivalentKeys()
     #doSomeExperimentation_breakIntoUnitSquares()
