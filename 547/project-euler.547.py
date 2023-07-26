@@ -88,44 +88,6 @@ def dist(x1, y1, x2, y2):
 def ONE(a, b, c, d):
     return 1
 
-# n = 3
-# Use inclusion exclusion.
-#   Include entire square
-#     But this include cases where one or both points are in the void!
-#             scipy.integrate.nquad(dist, [[0,3]    for i in range(4)])[0]
-#   Exclude cases where one point is in the void for sure, other point is anywhere
-#     But this removes the case of both points being in the void two times
-#        -2 * scipy.integrate.nquad(dist, [[0,3], [0,3], [1,2], [1,2]])[0]
-#   So add one copy of the case where both points are in the void back in
-#           + scipy.integrate.nquad(dist, [[1,2]    for i in range(4)])[0]
-# scipy.integrate.nquad(dist, [[0,3] for i in range(4)])[0] - 2 * scipy.integrate.nquad(dist, [[0,3], [0,3], [1,2], [1,2]])[0] + scipy.integrate.nquad(dist, [[1,2] for i in range(4)])[0]
-# 105.68651664234636
-# 105.68651664234636 / 64
-# 1.651351822536662
-# 1.6514 (Target)
-
-def manualCaseFor3():
-    expected3 = (\
-          scipy.integrate.nquad(dist, [[0,3] for i in range(4)])[0] \
-     -2 * scipy.integrate.nquad(dist, [[0,3], [0,3], [1,2], [1,2]])[0] \
-        + scipy.integrate.nquad(dist, [[1,2] for i in range(4)])[0] \
-    ) / 64
-    logDebug(f"n = 3 (manual): {expected3}")
-
-"""
-There are three partials per lamina, three integrals to compute as part of an
-inclusion-exclusion process to find the desired 'lamina-punctured integral.' They
-are computed and combined as follows, where (a,b) is the coordinate of the lower
-left corner of the removed rectangle, and (w,h) are the width and height of the
-removed rectangle (respectively).
-    valueToDivideBy = (\
-          scipy.integrate.nquad(ONE, [[0,n]            for i in range(4)], opts=options)[0] \
-     -2 * scipy.integrate.nquad(ONE, [[0,n],     [0,n], [a,a+w], [b,b+h]], opts=options)[0] \
-        + scipy.integrate.nquad(ONE, [[a,a+w], [b,b+h], [a,a+w], [b,b+h]], opts=options)[0] \
-    )
-
-The memoizedPartials and getPartial method help to avoid duplicate computations.
-"""
 memoizedPartials = dict()
 def getPartial(a, b, c, d):
     options = {
@@ -148,24 +110,6 @@ def getPartial(a, b, c, d):
 
     return v
 
-"""
-If one square lamina is a pure scaling of another square lamina, the expected
-distance scales in exactly the same way. For example,
-  xxx
-  x x
-  xxx
-is a 2x scaling of
-  xxxxxx
-  xxxxxx
-  xx  xx
-  xx  xx
-  xxxxxx
-  xxxxxx
-and so we can compute
-    expectedDistForSquareLamina(6,2,2,2,2) = 2 * a
-where
-    a = expectedDistForSquareLamina(3,1,1,1,1)
-"""
 memoizedExpectedDistForSquareLamina = dict()
 def expectedDistForSquareLamina(n, a, b, w, h):
     lamina = (n, a, b, w, h)
@@ -298,26 +242,6 @@ def runMain():
     print(f"Grand total for n from {minN} to {maxN}: {total}")
     logDebug()
 
-def doSomeExperimentation():
-    a = expectedDistForSquareLamina(3,1,1,1,1)
-    print(f"a x 1 = {a * 1}")
-    print(f"a x 2 = {a * 2}")
-    print(f"a x 3 = {a * 3}")
-    print(f"a x 4 = {a * 4}")
-    print()
-    b = expectedDistForSquareLamina(6,2,2,2,2)
-    print(f"a x 2 = {a * 2}")
-    print(f"b x 1 = {b * 1}")
-    print()
-    c = expectedDistForSquareLamina(9,3,3,3,3)
-    print(f"a x 3 = {a * 3}")
-    print(f"c x 1 = {c * 1}")
-    print()
-    d = expectedDistForSquareLamina(12,4,4,4,4)
-    print(f"a x 4 = {a * 4}")
-    print(f"d x 1 = {d * 1}")
-    print()
-
 def doSomeExperimentation2():
     n = 9
     (a, b) = (1, 2)
@@ -344,17 +268,6 @@ def doSomeExperimentation2():
 
 def doSomeExperimentation3():
     """
-    unitSquareE = getPartial(*unitSquareBounds)
-    e = unitSquareE
-    e= 0.5214054334972098
-    e3 =(8*(e+0) +
-        16*(e+1) +
-        12*(e+2) +
-         8*(e+sqrt(2)) +
-        16*(e+sqrt(5)) +
-         4*(e+sqrt(8))) / 64
-    """
-    """
     boundsToFreqMap = {
         ((0,1), (0,1), (0,1), (0,1)):  8,
         ((0,1), (0,1), (0,1), (1,2)): 16,
@@ -365,21 +278,6 @@ def doSomeExperimentation3():
     }
     """
 
-    """
-    boundsToFreqMap = defaultdict(int)
-    N = 3
-    for t in itertools.product(range(N), range(N), range(N), range(N)):
-        (x1, y1, x2, y2) = t
-        #logInfo((x1, y1, x2, y2))
-        c1 = (x1, y1)
-        c2 = (x2, y2)
-        if c1 == (1,1) or c2 == (1,1):
-            #logInfo("  skipping")
-            continue
-        dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
-        bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
-        boundsToFreqMap[bounds] += 1
-    """
     grandTotal = 0
     for n in range(3, 40+1):
         laminae = []
