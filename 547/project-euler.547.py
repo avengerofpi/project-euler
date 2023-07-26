@@ -15,29 +15,29 @@ class TestCase:
         self.expected = expected
 
 TESTS = [
-    TestCase(3, "1.6514"),
-    TestCase(4, "19.6564"),
-    #TestCase(5, "97.81334558787319"),
-    #TestCase(6, "325.0072365326804"),
-    #TestCase(7, "851.1947929255208"),
-    #TestCase(8, "1903.386686792866"),
-    #TestCase(9, "3801.6289566334553"),
-    #TestCase(10, "6974.983978268594"),
-    #TestCase(11, "11977.511213075131"),
-    #TestCase(12, "19504.24783880133"),
-    #TestCase(13, "30407.189289768656"),
-    #TestCase(14, "45711.269791541185"),
-    #TestCase(16, "94583.16151446037"),
-    #TestCase(15, "66630.34280795284"),
-    #TestCase(17, "131209.3592441513"),
-    #TestCase(18, "178385.4299324293"),
-    #TestCase(19, "238240.70852004984"),
-    #TestCase(20, "313173.3514525104"),
-    #TestCase(21, "405866.3169928597"),
-    #TestCase(22, "519303.34561997105"),
-    #TestCase(23, "656784.940706292"),
+TestCase(3, "1.6514"),
+TestCase(4, "19.6564"),
+TestCase(5, "97.8133"), # "97.81334558787319"
+TestCase(6, "325.0072"), # "325.0072365326804"
+TestCase(7, "851.1947"), # "851.1947929255208"
+TestCase(8, "1903.3866"), # "1903.386686792866"
+TestCase(9, "3801.6289"), # "3801.6289566334553"
+TestCase(10, "6974.9839"), # "6974.983978268594"
+TestCase(11, "11977.5112"), # "11977.511213075131"
+TestCase(12, "19504.2478"), # "19504.24783880133"
+TestCase(13, "30407.1892"), # "30407.189289768656"
+TestCase(14, "45711.2697"), # "45711.269791541185"
+TestCase(16, "94583.1615"), # "94583.16151446037"
+TestCase(15, "66630.3428"), # "66630.34280795284"
+TestCase(17, "131209.3592"), # "131209.3592441513"
+TestCase(18, "178385.4299"), # "178385.4299324293"
+TestCase(19, "238240.7085"), # "238240.70852004984"
+TestCase(20, "313173.3514"), # "313173.3514525104"
+TestCase(21, "405866.3169"), # "405866.3169928597"
+TestCase(22, "519303.3456"), # "519303.34561997105"
+TestCase(23, "656784.9407"), # "656784.940706292"
 
-    #TestCase(40, "UNKNOWN"),
+#TestCase(40, "UNKNOWN"),
 ]
 
 PARTIALS_TESTS = [
@@ -168,38 +168,44 @@ where
 """
 memoizedExpectedDistForSquareLamina = dict()
 def expectedDistForSquareLamina(n, a, b, w, h):
-    baseK = (n, a, b, w, h)
-    logDebug(f"computing expectedDistForSquareLamina{baseK}")
-    # Check if lamina is a scaled copy of a smaller lamina
-    scale = gcd(n, gcd(a, gcd(b, gcd(w, h))))
-    kScaled = tuple(v//scale for v in [n, a, b, w, h])
-    logDebug(f"Maximum scale is {scale} -> {kScaled}")
-    usedK = baseK
-    if baseK in memoizedExpectedDistForSquareLamina.keys():
-        expectedDist = memoizedExpectedDistForSquareLamina[baseK]
-        logDebug(f"The value for {baseK} is known from previous computations")
-    elif (scale > 1) and (kScaled in memoizedExpectedDistForSquareLamina.keys()):
-        usedK = kScaled
-        expectedDist = memoizedExpectedDistForSquareLamina[kScaled]
-        logDebug(f"The value for {baseK} is known from previous computation of {kScaled}")
+    lamina = (n, a, b, w, h)
+    logDebug(f"computing expectedDistForSquareLamina{lamina}")
+    if lamina in memoizedExpectedDistForSquareLamina.keys():
+        expectedDist = memoizedExpectedDistForSquareLamina[lamina]
+        logDebug(f"The value for {lamina} is known from previous computations")
     else:
+        #expectedDist = 1
+
+        logDebug(f"lamina {lamina}")
+        printLamina(*lamina)
+        boundsToFreqMap = defaultdict(int)
+        n, a, b, w, h = lamina
+        for t in itertools.product(*itertools.repeat(range(n), 4)):
+            x1, y1, x2, y2 = t
+            if ((a <= x1 and x1 <  a+w) and (b <= y1 and y1 <  b+h)) or ((a <= x2 and x2 <  a+w) and (b <= y2 and y2 <  b+h)):
+                logDebug(f"Skipping coors {(x1, y1), (x2, y2)}")
+                continue
+            dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
+            bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
+            boundsToFreqMap[bounds] += 1
+
+        e = 0
+        for bounds, freq in sorted(boundsToFreqMap.items()):
+            area = getPartial(*bounds)
+            areaMultiplied = area * freq
+            logDebug(f"{bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
+            e += areaMultiplied
+
         areaSquare = n ** 2
         areaVoid = w * h
         valueToDivideBy = (areaSquare - areaVoid) ** 2
-
-        #expectedDist = 1
-        #"""
-        expectedDist = (\
-              getPartial((0,n),     (0,n),   (0,n),   (0,n)) \
-         -2 * getPartial((0,n),     (0,n), (a,a+w), (b,b+h)) \
-            + getPartial((a,a+w), (b,b+h), (a,a+w), (b,b+h)) \
-        ) / valueToDivideBy
-        #"""
+        expectedDist  = e / valueToDivideBy
+        logDebug(f"  lamina {lamina} -> {expectedDist  :10.6f}")
 
     #logDebug(f"    valueToDivideBy:     {valueToDivideBy}")
     printLamina(n, a, b, w, h)
-    logDebug(f"expectedDistForSquareLamina{baseK}: {expectedDist}")
-    if baseK not in memoizedExpectedDistForSquareLamina.keys():
+    logDebug(f"expectedDistForSquareLamina{lamina}: {expectedDist}")
+    if lamina not in memoizedExpectedDistForSquareLamina.keys():
         equivalentKeys = [
             (n,     a,     b, w, h),
             (n,     a, n-b-h, w, h),
@@ -239,7 +245,8 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
         expected = testCase.expected
         ansStr = f"{total:.4f}"
         successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
-        logDebug(f"{n}: {ansStr} - {successStr}")
+        logInfo(f"{n}: {ansStr} - {successStr}")
+        #logDebug(f"{n}: {ansStr} - {successStr}")
     endTime = getTimeInMillis()
     logTimeDiff = endTime - startTime
     logDebug(f"  Time spent: {timedelta(milliseconds=logTimeDiff)} (for N = {n:>2})")
@@ -260,15 +267,26 @@ def runMain():
     total = 0
     minN = 3
     maxN = 40
-    #for n in range(minN, maxN + 1):
+    #for n in [3]:
+    grandTotal = 0
     startTime = getTimeInMillis()
-    for n in [3]:
-        total += sumExpectedDistForSquareLaminaeOfSizeN(n)
+    for n in range(minN, maxN + 1):
+
+        laminae = []
+        for a in range(1, n-1):
+            for w in range(1, n-a):
+                for b in range(1, n-1):
+                    for h in range(1, n-b):
+                        laminae.append((n, a, b, w, h))
+        total = sumExpectedDistForSquareLaminaeOfSizeN(n)
+        grandTotal += total
         logDebug()
-        print(f"Running total for n from {minN} to {n}: {total}")
+        logInfo(f"N={n} -> {total:18.6f} -> {grandTotal:18.6f}")
+        #logInfo(f"Running total for n from {minN} to {n}: {total}")
         logDebug()
         logDebug('-' * 50)
         logDebug()
+
     endTime = getTimeInMillis()
     logTimeDiff = endTime - startTime
     logDebug(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
@@ -362,56 +380,17 @@ def doSomeExperimentation3():
         bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
         boundsToFreqMap[bounds] += 1
     """
-    grandTotal = 0
-    for n in range(3, 40+1):
-        laminae = []
-        for a in range(1, n-1):
-            for w in range(1, n-a):
-                for b in range(1, n-1):
-                    for h in range(1, n-b):
-                        laminae.append((n, a, b, w, h))
-        total = 0
-        for lamina in laminae:
-            logDebug(f"lamina {lamina}")
-            printLamina(*lamina)
-            boundsToFreqMap = defaultdict(int)
-            n, a, b, w, h = lamina
-            for t in itertools.product(*itertools.repeat(range(n), 4)):
-                x1, y1, x2, y2 = t
-                if ((a <= x1 and x1 <  a+w) and (b <= y1 and y1 <  b+h)) or ((a <= x2 and x2 <  a+w) and (b <= y2 and y2 <  b+h)):
-                    logDebug(f"Skipping coors {(x1, y1), (x2, y2)}")
-                    continue
-                dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
-                bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
-                boundsToFreqMap[bounds] += 1
-
-            e = 0
-            for bounds, freq in sorted(boundsToFreqMap.items()):
-                area = getPartial(*bounds)
-                areaMultiplied = area * freq
-                logDebug(f"{bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
-                e += areaMultiplied
-
-            areaSquare = n ** 2
-            areaVoid = w * h
-            valueToDivideBy = (areaSquare - areaVoid) ** 2
-            inc = e / valueToDivideBy
-            logDebug(f"  lamina {lamina} -> {inc:10.6f}")
-            total += inc
-
-        grandTotal += total
-        logInfo(f"N={n} -> {total:10.6f} -> {grandTotal:10.6f}")
 
     logInfo(f"Grand total: {grandTotal:10.6f}")
 
     return
 
 def main():
-    #runMain()
+    runMain()
     #testPartials()
 
     #doSomeExperimentation2()
-    doSomeExperimentation3()
+    #doSomeExperimentation3()
 
 # Main logic
 if __name__ == '__main__':
