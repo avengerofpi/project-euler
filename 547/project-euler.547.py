@@ -242,7 +242,7 @@ def runMain():
     print(f"Grand total for n from {minN} to {maxN}: {total}")
     logDebug()
 
-def doSomeExperimentation2():
+def doSomeExperimentation_equivalentKeys():
     n = 9
     (a, b) = (1, 2)
     (w, h) = (2, 3)
@@ -266,7 +266,7 @@ def doSomeExperimentation2():
         v = dd[k]
         print(f"{k} = {v}")
 
-def doSomeExperimentation3():
+def doSomeExperimentation_breakIntoUnitSquares():
     """
     boundsToFreqMap = {
         ((0,1), (0,1), (0,1), (0,1)):  8,
@@ -338,8 +338,8 @@ def main():
     runMain()
     #testPartials()
 
-    #doSomeExperimentation2()
-    #doSomeExperimentation3()
+    #doSomeExperimentation_equivalentKeys()
+    #doSomeExperimentation_breakIntoUnitSquares()
 
 # Main logic
 if __name__ == '__main__':
