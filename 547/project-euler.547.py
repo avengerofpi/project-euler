@@ -7,6 +7,7 @@ from datetime import timedelta
 import time
 from collections import defaultdict
 import itertools
+from colorama import Fore, Back, Style
 
 # Constants
 class TestCase:
@@ -14,6 +15,7 @@ class TestCase:
         self.N = N
         self.expected = expected
 
+UNKNOWN = "UNKNOWN"
 TESTS = [
 TestCase( 3,      "1.6514"),
 TestCase( 4,     "19.6564"),
@@ -36,13 +38,15 @@ TestCase(20, "313173.3515"), # "313173.3514525104"
 TestCase(21, "405866.3170"), # "405866.3169928597"
 TestCase(22, "519303.3456"), # "519303.34561997105"
 TestCase(23, "656784.9407"), # "656784.940706292"
-#TestCase(40, "UNKNOWN"),
+#TestCase(40, UNKNOWN),
 ]
 
 # Logging
 info = True
 debug = False
 verbose = False
+laminaFlag = False
+colorFlag = True
 def logInfo(msg = ""):
     if info:
         print(msg, flush=True)
@@ -57,6 +61,12 @@ def getTimeInMillis():
     return int(time.time() * 1000)
 
 def printLamina(n, a, b, w, h):
+    if not laminaFlag:
+        return
+
+    debugWas = debug
+    debug = True
+
     INDENT = '  '
     X = 'x'
     VOID = ' '
@@ -71,6 +81,34 @@ def printLamina(n, a, b, w, h):
     # Bottom rows after void
     for r in range(b, 0, -1):
         logDebug(INDENT + FULL_LINE)
+
+    debug = debugWas
+
+def printTestResult(tc, result):
+    RESET_COLOR = Style.RESET_ALL
+
+    expected = tc.expected
+    ans = result.expected
+    if expected == UNKNOWN:
+        successStr = UNKNOWN
+        b = Back.YELLOW
+        c = Fore.RED
+    elif ans == expected:
+        successStr = "SUCCESS"
+        b = Back.GREEN
+        c = Fore.RED
+    else:
+        successStr = f"FAILURE (expected {expected} but got {ans})"
+        b = Back.RED
+        c = Fore.YELLOW
+
+    if not colorFlag:
+        b = ""
+        c = ""
+        RESET_COLOR = ""
+    logInfo(f"{c}{b} Result for {tc.N}: {successStr} {RESET_COLOR}")
+    logInfo(f"  Expected: {tc.expected:10}")
+    logInfo(f"  Actual:   {result.expected:10}")
 
 # Functions
 def dist(x1, y1, x2, y2):
@@ -88,7 +126,7 @@ def getPartial(a, b, c, d):
 
     bounds = (a, b, c, d)
     v = 0
-    logDebug(f"Computing partial for {bounds}")
+    logVerbose(f"Computing partial for {bounds}")
     if bounds in memoizedPartials.keys():
         logVerbose(f"  Partial HAS been previously computed")
         v = memoizedPartials[bounds]
@@ -97,28 +135,28 @@ def getPartial(a, b, c, d):
         #v = scipy.integrate.nquad(ONE, bounds, opts=options)[0]
         v = scipy.integrate.nquad(dist, bounds, opts=options)[0]
         memoizedPartials[bounds] = v
-    logDebug(f"  Value: {v}")
+    logVerbose(f"Partial for {bounds}: value: {v}")
 
     return v
 
 memoizedExpectedDistForSquareLamina = dict()
 def expectedDistForSquareLamina(n, a, b, w, h):
     lamina = (n, a, b, w, h)
-    logDebug(f"computing expectedDistForSquareLamina{lamina}")
+    logVerbose(f"computing expectedDistForSquareLamina({lamina})")
+    printLamina(n, a, b, w, h)
     if lamina in memoizedExpectedDistForSquareLamina.keys():
         expectedDist = memoizedExpectedDistForSquareLamina[lamina]
-        logDebug(f"The value for {lamina} is known from previous computations")
+        logVerbose(f"The value for {lamina} is known from previous computations")
     else:
         #expectedDist = 1
 
-        logDebug(f"lamina {lamina}")
-        printLamina(*lamina)
+        logVerbose(f"lamina {lamina}")
         boundsToFreqMap = defaultdict(int)
         n, a, b, w, h = lamina
         for t in itertools.product(*itertools.repeat(range(n), 4)):
             x1, y1, x2, y2 = t
             if ((a <= x1 and x1 <  a+w) and (b <= y1 and y1 <  b+h)) or ((a <= x2 and x2 <  a+w) and (b <= y2 and y2 <  b+h)):
-                logDebug(f"Skipping coors {(x1, y1), (x2, y2)}")
+                logVerbose(f"Skipping coors {(x1, y1), (x2, y2)}")
                 continue
             dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
             bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
@@ -128,18 +166,16 @@ def expectedDistForSquareLamina(n, a, b, w, h):
         for bounds, freq in sorted(boundsToFreqMap.items()):
             area = getPartial(*bounds)
             areaMultiplied = area * freq
-            logDebug(f"{bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
+            logVerbose(f"lamina {lamina}: {bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
             e += areaMultiplied
 
         areaSquare = n ** 2
         areaVoid = w * h
         valueToDivideBy = (areaSquare - areaVoid) ** 2
         expectedDist  = e / valueToDivideBy
-        logDebug(f"  lamina {lamina} -> {expectedDist  :10.6f}")
+        logVerbose(f"  lamina {lamina} -> {expectedDist  :10.6f}")
 
-    #logDebug(f"    valueToDivideBy:     {valueToDivideBy}")
-    printLamina(n, a, b, w, h)
-    logDebug(f"expectedDistForSquareLamina{lamina}: {expectedDist}")
+    logDebug(f"expectedDistForSquareLamina({lamina}): {expectedDist}")
     if lamina not in memoizedExpectedDistForSquareLamina.keys():
         equivalentKeys = [
             (n,     a,     b, w, h),
@@ -153,12 +189,12 @@ def expectedDistForSquareLamina(n, a, b, w, h):
             (n, n-b-h, n-a-w, h, w),
         ]
         equivalentKeys = sorted(set(equivalentKeys))
-        logDebug(f"The following keys are quivalent:")
+        logVerbose(f"The following keys are quivalent:")
         for k in equivalentKeys:
-            logDebug(f"  {k}")
+            logVerbose(f"  {k}")
             #printLamina(*k)
             memoizedExpectedDistForSquareLamina[k] = expectedDist
-    logDebug()
+    logVerbose()
     return expectedDist
 
 def sumExpectedDistForSquareLaminaeOfSizeN(n):
@@ -179,8 +215,8 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
     if testCase:
         expected = testCase.expected
         ansStr = f"{total:.4f}"
-        successStr = "SUCCESS" if (ansStr == expected) else f"FAILURE (expected {expected})"
-        logInfo(f"{n}: {ansStr} - {successStr}")
+        result = TestCase(n, ansStr)
+        printTestResult(testCase, result)
         #logDebug(f"{n}: {ansStr} - {successStr}")
     endTime = getTimeInMillis()
     logTimeDiff = endTime - startTime
@@ -268,14 +304,14 @@ def doSomeExperimentation_breakIntoUnitSquares():
                         laminae.append((n, a, b, w, h))
         total = 0
         for lamina in laminae:
-            logDebug(f"lamina {lamina}")
+            logVerbose(f"lamina {lamina}")
             printLamina(*lamina)
             boundsToFreqMap = defaultdict(int)
             n, a, b, w, h = lamina
             for t in itertools.product(*itertools.repeat(range(n), 4)):
                 x1, y1, x2, y2 = t
                 if ((a <= x1 and x1 <  a+w) and (b <= y1 and y1 <  b+h)) or ((a <= x2 and x2 <  a+w) and (b <= y2 and y2 <  b+h)):
-                    logDebug(f"Skipping coors {(x1, y1), (x2, y2)}")
+                    logVerbose(f"Skipping coors {(x1, y1), (x2, y2)}")
                     continue
                 dx, dy = sorted([abs(x2-x1), abs(y2-y1)])
                 bounds = ((0,1), (0,1), (dx, dx+1), (dy, dy+1))
@@ -285,14 +321,14 @@ def doSomeExperimentation_breakIntoUnitSquares():
             for bounds, freq in sorted(boundsToFreqMap.items()):
                 area = getPartial(*bounds)
                 areaMultiplied = area * freq
-                logDebug(f"{bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
+                logVerbose(f"lamina {lamina}: {bounds} occurs {freq:>2} times -> {area:10.6f} -> {areaMultiplied:10.6f}")
                 e += areaMultiplied
 
             areaSquare = n ** 2
             areaVoid = w * h
             valueToDivideBy = (areaSquare - areaVoid) ** 2
             inc = e / valueToDivideBy
-            logDebug(f"  lamina {lamina} -> {inc:10.6f}")
+            logVerbose(f"  lamina {lamina} -> {inc:10.6f}")
             total += inc
 
         testCase = None
