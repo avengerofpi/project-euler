@@ -187,11 +187,9 @@ def getTimeInMillis():
 # Functions
 def logList(currList, iterNum, logger = logDebug):
     width = 5
-    logger(f"  {iterNum:{width}d}: {currList}")
-    logger(f"  {iterNum:{width}d}: {transformFactoredListIntoProductList(currList)} (productized)")
+    logger(f"  {iterNum:{width}d}:")
     for e in currList:
-        #v = prod(e)
-        logger(f" {' ' * width}... {e}")
+        logger(f" {' ' * width} {e}")
 
 def transformFactoredListIntoProductList(currList):
     return [prod(e) for e in currList]
@@ -239,8 +237,8 @@ def printTestResult(tc, result):
         b = Back.RED
         c = Fore.YELLOW
     logInfo(f"{c}{b} Result for {tc.N} after {numIters} rounds: {successStr} {RESET_COLOR}")
-    logInfo(f"  Expected: {tc.expected:10} (period len {tc.period:7} starting at {tc.periodStart}")
-    logInfo(f"  Actual:   {result.expected:10} (period len {result.period:7} starting at {result.periodStart}")
+    logInfo(f"  Expected: {tc.expected:10} (period len {tc.period:7} starting at {tc.periodStart})")
+    logInfo(f"  Actual:   {result.expected:10} (period len {result.period:7} starting at {result.periodStart})")
 
 def toDenatured(inputList):
     """
@@ -284,17 +282,18 @@ def toDenatured(inputList):
             symbolToValueMap[symbol] = inputList[i][j]
             symbol += 1
     logger(f"valueToIndexListMap")
-    logValueMap(valueToIndexListMap)
+    logValueMap(valueToIndexListMap, logger)
     logger(f"symbolToValueMap")
-    logValueMap(symbolToValueMap)
+    logValueMap(symbolToValueMap, logger)
     logger(f"toDenatured output:")
     logList(outputList, -1, logger)
     return outputList, symbolToValueMap
 
 def runFactorShuffle(n, numIters):
-    logInfo(f"Running for n = {n}, {numIters} rounds:")
+    logInfo(f"Running {numIters} rounds for n = {n}:")
     origList = transformRange(n)
-    logList(origList, 0)
+    logger = logInfo
+    logList(origList, 0, logger)
     # The first list will not be seen again, so don't bother adding it
     seenToIndexMap = defaultdict(int)
     period = UNKNOWN
@@ -303,7 +302,7 @@ def runFactorShuffle(n, numIters):
     currList, symbolToValueMap = toDenatured(origList)
     for i in range(1, numIters+1):
         currList = nextList(currList)
-        logList(currList, i)
+        logList(currList, i, logger)
         currTuple = tuple(tuple(e) for e in sorted(currList))
 
         if i % (10 ** 5) == 0:
@@ -363,6 +362,8 @@ def runTests():
         endTime = getTimeInMillis()
         logTimeDiff = endTime - startTime
         logTiming(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
+        logInfo()
+        logInfo()
         logInfo()
 
 def troubleshoot():
