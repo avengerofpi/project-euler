@@ -87,20 +87,21 @@ class TestCase:
         self.shapePeriodStart = shapePeriodStart
 
 TESTS = [
-#TestCase(5, 3, 21, UNKNOWN, UNKNOWN, UNKNOWN),
+TestCase(5, 3, 21, UNKNOWN, UNKNOWN, UNKNOWN),
 TestCase(5, 10, 19, 3, 4, UNKNOWN),
 TestCase(10, 100, 257, 60, 16, UNKNOWN),
-# TestCase(11, 100, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
 TestCase(10, 101, 175, 60, 16, UNKNOWN),
 TestCase(10, 1000, 257, 60, 16, UNKNOWN),
 TestCase(10, 1001, 175, 60, 16, UNKNOWN),
-TestCase(100, 1000, 989136573, 232792560, 400, UNKNOWN),
+TestCase(100, 1000, 989136573, 232792560, 400, 22, UNKNOWN),
 #TestCase(100, 10**3, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN), # test for UNKNOWN warning
 #TestCase(100, 10**3, 1, UNKNOWN, UNKNOWN, UNKNOWN), # test for error
-    TestCase(100, 10**6, 360990789, 232792560, UNKNOWN, UNKNOWN),
-    TestCase(1000, 10000, 204600045, 410555180440430163438262940577600, 4840, 76, UNKNOWN),
-TestCase(1000, 100000, 803889757, UNKNOWN, UNKNOWN, UNKNOWN),
-TestCase(10**4, 10**16, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
+TestCase(100, 10**6, 360990789, 232792560, 400, 22, UNKNOWN),
+TestCase(1000, 10000, 204600045, 410555180440430163438262940577600, 4840, 76, UNKNOWN),
+TestCase(1000, 100000, 803889757, 410555180440430163438262940577600, 4840, 76, UNKNOWN),
+TestCase(3000, 10**16, 1013079068, 1749342047920660916901891145781670987072592322134428432000, 16470, 135, UNKNOWN),
+TestCase(6000, 10**16, 132286426, 8603769834781171457272804805623074954273764323780252384481978979089202817658786064000, 33511, 194, UNKNOWN),
+TestCase(10**4, 10**16, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
 # require too much memory atm
 #TestCase(1000, 1000000, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
 #TestCase(a, b, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
@@ -171,6 +172,7 @@ TestCase(10**4, 10**16, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
 
 # Constants
 MOD = 1234567891
+CLEARED = "cleared"
 
 # Logging
 info = True
@@ -348,10 +350,13 @@ def computePerm(prevTuple, currTuple, symbolsIn):
         permFactored.append(factor)
     permFactored = tuple(permFactored)
     logDebug(f"    -> {permFactored}")
+    return perm, permFactored
 
+def transformPermToIndexedFactors(perm):
     logDebug(f"    Indexed factored permutation")
     indexedFactors = dict()
-    for a in symbolsIn:
+    symbols = perm.keys()
+    for a in symbols:
         factor = [a]
         b = perm[a]
         while b != a:
@@ -360,7 +365,7 @@ def computePerm(prevTuple, currTuple, symbolsIn):
         indexedFactors[a] = factor
         logDebug(f"      {a:2}: {factor}")
 
-    return perm, permFactored, indexedFactors
+    return indexedFactors
 
 def lcm(a, b):
     return a * b // gcd(a, b)
@@ -370,7 +375,7 @@ def lcmArray(arr):
         raise Exception(f"lcm requires an array of at least two numbers, but got {arr}")
     ret = 1
     for e in arr:
-        ret = ret * e // gcd(ret, e)
+        ret = lcm(ret, e)#ret * e // gcd(ret, e)
     return ret
 
 def runFactorShuffle(n, numIters):
@@ -407,28 +412,30 @@ def runFactorShuffle(n, numIters):
         prevIndices = shapeToIndicesMap[currShape]
         if len(prevIndices) > 0:
             # compute and store new perm
-            logDebug(f"    prevIndices: {prevIndices}")
-            logDebug(f"    prevTuples:")
-            for prevI in prevIndices:
-                prevT = prevTupleList[prevI]
-                logDebug(f"      {prevI:2}: {prevT}")
-            logDebug(f"    prevPerms:")
-            for prevI in prevIndices[:-1]:
-                # logDebug(f"  prevI: {prevI}")
-                _, prevP, _ = indexToPermMap[prevI]
-                logDebug(f"      {prevI:2}: {prevP}")
+            if debug:
+                logDebug(f"    prevIndices: {prevIndices}")
+                logDebug(f"    prevTuples:")
+                for prevI in prevIndices:
+                    prevT = prevTupleList[prevI]
+                    logDebug(f"      {prevI:2}: {prevT}")
+                logDebug(f"    prevPerms:")
+                for prevI in prevIndices[:-1]:
+                    # logDebug(f"  prevI: {prevI}")
+                    _, prevP, _ = indexToPermMap[prevI]
+                    logDebug(f"      {prevI:2}: {prevP}")
+
             prevIndex = prevIndices[-1]
             prevTuple = prevTupleList[prevIndex]
-            perm, permFactored, indexedFactors = computePerm(prevTuple, currTuple, symbols)
-            indexToPermMap[prevIndex] = (perm, permFactored, indexedFactors)
+            perm, permFactored = computePerm(prevTuple, currTuple, symbols)
+            indexToPermMap[prevIndex] = permFactored
 
         permA = 0
         permB = 1
         if len(prevIndices) > 1:
             prevIndexA = prevIndices[-2]
             prevIndexB = prevIndices[-1]
-            _, permA, _ = indexToPermMap[prevIndexA]
-            _, permB, _ = indexToPermMap[prevIndexB]
+            permA = indexToPermMap[prevIndexA]
+            permB = indexToPermMap[prevIndexB]
 
         if permA == permB:
             logDebug(f"Found two identical perms: {permA}")
@@ -452,6 +459,7 @@ def runFactorShuffle(n, numIters):
                 additionalSubSteps = additionalSteps % shapePeriod
                 logInfo(f"Need to perform {additionalSteps} more steps")
                 logInfo(f"  {shapeLoops:4} shape periods")
+                indexedFactors = transformPermToIndexedFactors(perm)
                 finalList = []
                 for e in currList:
                     newE = []
@@ -469,29 +477,11 @@ def runFactorShuffle(n, numIters):
                     finalList = nextList(finalList)
                     logDebug(f"  {currIndex + shapeLoops*shapePeriod + ii:2}: {finalList}")
                     # logList(finalList, currIndex + shapeLoops*shapePeriod + 11, logInfo)
-
-
-                # if additionalSteps > 1000:
-                # if False:
-                #     logInfo(f"Need to perform {additionalSteps} more steps, but this is too many - aborting")
-                #     finalList = []
-                # else:
-                #     finalList = currList
-                #     oldList, _ = toDenatured(origList)
-                #     for ii in range(currIndex+1):
-                #         logDebug(f"  {ii:2}: {oldList}")
-                #         oldList = nextList(oldList)
-                #     for ii in range(additionalSteps):
-                #         finalList = nextList(finalList)
-                #         logDebug(f"  {currIndex + ii + 1:2}: {finalList}")
             else:
                 finalList = prevTupleList[shortCircuitIndex]
 
             finalListOrigValues = [[symbolToValueMap[e] for e in ee] for ee in finalList]
 
-            #for aList, aIndex in tupleToIndexMap.items():
-            #    if aIndex == finalIndex:
-            #        finalList = aList
             logInfo(f"---------- THIS ENTRY HAS BEEN SEEN BEFORE ----------")
             logInfo(f"  n                  {n}")
             logInfo(f"  numIters           {numIters}")
@@ -519,10 +509,14 @@ def runFactorShuffle(n, numIters):
         # only track the last two indices/perms/etc
         indicesToTrim = shapeToIndicesMap[currShape][0:-2]
         indicesToKeep = shapeToIndicesMap[currShape][-2:]
-        logDebug(f"currIndex: {currIndex} - trimming indices {indicesToTrim} - keep indices {indicesToKeep}")
+        logInfo(f"currIndex: {currIndex} - trimming indices {indicesToTrim} - keep indices {indicesToKeep}")
         for ii in indicesToTrim:
             indexToPermMap.pop(ii)
         shapeToIndicesMap[currShape] = indicesToKeep
+        # 
+        minIndexToKeep = min([0] + indicesToKeep)
+        for ii in range(minIndexToKeep):
+            prevTuple[ii] = CLEARED
             
     finalValueList = [[symbolToValueMap[i] for i in e] for e in currList]
 
@@ -571,18 +565,6 @@ def troubleshoot():
 def main():
     #troubleshoot()
     runTests()
-
-    # lcm tests
-    # pp = [2, 3, 5, 6]
-    # qq = [2, 3, 5, 7]
-    # arr = qq
-    # for p in pp:
-    #     for q in qq:
-    #         l = lcm(p, q)
-    #         logInfo(f"lcm({p}, {q}) = {l}")
-    # l = lcmArray(arr)
-    # logInfo(f"lcm({arr}) = {l}")
-
 
 # Main logic
 if __name__ == '__main__':
