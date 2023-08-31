@@ -101,7 +101,7 @@ TestCase(1000, 10000, 204600045, 410555180440430163438262940577600, 4840, 76, UN
 TestCase(1000, 100000, 803889757, 410555180440430163438262940577600, 4840, 76, UNKNOWN),
 TestCase(3000, 10**16, 1013079068, 1749342047920660916901891145781670987072592322134428432000, 16470, 135, UNKNOWN),
 TestCase(6000, 10**16, 132286426, 8603769834781171457272804805623074954273764323780252384481978979089202817658786064000, 33511, 194, UNKNOWN),
-TestCase(10**4, 10**16, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
+TestCase(10**4, 10**16, UNKNOWN, 8337245403447921335829504375888192675135162254454825924977726845769444687965016467695833282339504042669808000, 58435, 253, UNKNOWN),
 # require too much memory atm
 #TestCase(1000, 1000000, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
 #TestCase(a, b, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
@@ -393,6 +393,7 @@ def runFactorShuffle(n, numIters):
     indexToPermMap = defaultdict(tuple)
     period = UNKNOWN
     periodStart = UNKNOWN
+    shapePeriod = UNKNOWN
 
     currList, symbolToValueMap = toDenatured(origList)
     symbols = set(symbolToValueMap.keys())
@@ -431,7 +432,7 @@ def runFactorShuffle(n, numIters):
 
         permA = 0
         permB = 1
-        if len(prevIndices) > 1:
+        if len(prevIndices) > 1 and (shapePeriod == UNKNOWN or (currIndex % shapePeriod == 0)):
             prevIndexA = prevIndices[-2]
             prevIndexB = prevIndices[-1]
             permA = indexToPermMap[prevIndexA]
@@ -442,7 +443,6 @@ def runFactorShuffle(n, numIters):
             periodStart = prevIndexA
             # extract permutation going from prevIndex to i = currIndex
             shapePeriod = prevIndexB - prevIndexA
-            # permPeriod = int(numpy.lcm.reduce([len(factor) for factor in permFactored]))
             permPeriod = lcmArray([len(factor) for factor in permFactored])
             period = permPeriod * shapePeriod
 
@@ -454,7 +454,6 @@ def runFactorShuffle(n, numIters):
             # extend list, if needed
             additionalSteps = shortCircuitIndex - currIndex
             if additionalSteps > 0:
-                # additionalSteps = shortCircuitIndex - currIndex
                 shapeLoops = additionalSteps // shapePeriod
                 additionalSubSteps = additionalSteps % shapePeriod
                 logInfo(f"Need to perform {additionalSteps} more steps")
@@ -513,10 +512,10 @@ def runFactorShuffle(n, numIters):
         for ii in indicesToTrim:
             indexToPermMap.pop(ii)
         shapeToIndicesMap[currShape] = indicesToKeep
-        # 
+        # Trim prevTupleList
         minIndexToKeep = min([0] + indicesToKeep)
         for ii in range(minIndexToKeep):
-            prevTuple[ii] = CLEARED
+            prevTupleList[ii] = CLEARED
             
     finalValueList = [[symbolToValueMap[i] for i in e] for e in currList]
 
