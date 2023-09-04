@@ -198,8 +198,8 @@ TestCase(96, 100000000, 339777873, 1629547920, 333, 21, UNKNOWN),
 TestCase(97, 100000000, 357552876, 232792560, 370, 21, UNKNOWN),
 TestCase(98, 100000000, 1052482442, 232792560, 400, 22, UNKNOWN),
 TestCase(99, 100000000, 615117769, 232792560, 400, 22, UNKNOWN)
-]
-"""
+# ]
+# """
 
 # Constants
 MOD = 1234567891
@@ -281,7 +281,7 @@ def printTestResult(tc, result):
     logInfo(f"{c}{b} Result for {tc.N} after {numIters} rounds: {successStr} {RESET_COLOR}")
     logInfo(f"  Expected: {tc.expected:10} (period len {tc.period:7} starting at {tc.periodStart})")
     logInfo(f"  Actual:   {result.expected:10} (period len {result.period:7} starting at {result.periodStart})")
-    logInfo(f"{c}{b}TestCase({tc.N}, {tc.numIters}, {result.expected}, {result.period}, {result.periodStart}, {result.shapePeriod}, {result.shapePeriodStart}),{RESET_COLOR}")
+    logInfo(f"{c}{b}TestCase({tc.N}, {tc.numIters}, {result.expected}, {result.period}, {result.periodStart}, {result.shapePeriod}, {result.shapePeriodStart}, UNKNOWN),{RESET_COLOR}")
 
 def toDenatured(inputList):
     """
@@ -303,8 +303,8 @@ def toDenatured(inputList):
     logger = logDebug
     symbolToValueMap = {}
     valueToIndexListMap = defaultdict(list)
-    logger(f"toDenatured input:")
-    logList(inputList, -1, logger = logger)
+    # logger(f"toDenatured input:")
+    # logList(inputList, -1, logger = logger)
     for i in range(len(inputList)):
         eIn = inputList[i]
         for j in range(len(eIn)):
@@ -320,16 +320,29 @@ def toDenatured(inputList):
             outputList[i][j] = symbol
             symbolToValueMap[symbol] = inputList[i][j]
             symbol += 1
-    logger(f"valueToIndexListMap")
-    logValueMap(valueToIndexListMap, logger)
-    logger(f"symbolToValueMap")
-    logValueMap(symbolToValueMap, logger)
-    logger(f"toDenatured output:")
-    logList(outputList, -1, logger)
+    # logger(f"valueToIndexListMap")
+    # logValueMap(valueToIndexListMap, logger)
+    # logger(f"symbolToValueMap")
+    # logValueMap(symbolToValueMap, logger)
+    # logger(f"toDenatured output:")
+    # logList(outputList, -1, logger)
     return outputList, symbolToValueMap
 
-def getShapeFromTuple(t):
-    return tuple(len(e) for e in t)
+def getTupleAndShapeFromList(currList):
+    tmp = sorted([(len(e), e) for e in currList])
+    currShape = tuple(n for (n, entry) in tmp)
+    currTuple = tuple(tuple(v for v in entry) for (n, entry) in tmp)
+
+    return currTuple, currShape
+
+def getShapeFromList(currList):
+    return [len(e) for e in currList]
+
+def nextShape(inShape):
+    shape = [e - 1 for e in inShape if e > 1]
+    shape.append(len(inShape))
+
+    return tuple(shape)
 
 def computePerm(prevTuple, currTuple, symbolsIn):
     """
@@ -352,22 +365,23 @@ def computePerm(prevTuple, currTuple, symbolsIn):
                     ...
                 }
     """
-    logDebug(f"    Checking perm for:")
-    logDebug(f"      prevTuple: {prevTuple}")
-    logDebug(f"      currTuple: {currTuple}")
+    #logDebug(f"    Checking perm for:")
+    #logDebug(f"      prevTuple: {prevTuple}")
+    #logDebug(f"      currTuple: {currTuple}")
     symbols = set(symbolsIn)
     perm = dict()
     for j in range(len(prevTuple)):
         for k in range(len(prevTuple[j])):
             perm[prevTuple[j][k]] = currTuple[j][k]
 
-    logVerbose(f"Permutation:")
-    logVerbose(f"  Base permutation:")
-    for s in sorted(symbols):
-        logVerbose(f"  {s:2}: {perm[s]:2}")
+    # if verbose:
+    #     logVerbose(f"Permutation:")
+    #     logVerbose(f"  Base permutation:")
+    #     for s in sorted(symbols):
+    #         logVerbose(f"  {s:2}: {perm[s]:2}")
 
     permFactored = list()
-    logDebug(f"    Factored permutation:")
+    #logDebug(f"    Factored permutation:")
     while len(symbols):
         a = min(symbols)
         symbols.remove(a)
@@ -378,16 +392,17 @@ def computePerm(prevTuple, currTuple, symbolsIn):
             symbols.remove(b)
             b = perm[b]
         factor = tuple(factor)
-        logDebug(f"      {factor}")
+        #logDebug(f"      {factor}")
         permFactored.append(factor)
     permFactored = tuple(permFactored)
-    logDebug(f"    -> {permFactored}")
+    #logDebug(f"    -> {permFactored}")
     return perm, permFactored
 
 def transformPermToIndexedFactors(perm):
-    logDebug(f"    Indexed factored permutation")
+    logDebug(f"Transforming permutation to indexed-factors permutation")
+    logVerbose(f"  perm: {perm}")
     indexedFactors = dict()
-    symbols = perm.keys()
+    symbols = sorted(perm.keys())
     for a in symbols:
         factor = [a]
         b = perm[a]
@@ -395,7 +410,7 @@ def transformPermToIndexedFactors(perm):
             factor.append(b)
             b = perm[b]
         indexedFactors[a] = factor
-        logDebug(f"      {a:2}: {factor}")
+        logVerbose(f"    {a:2}: {factor}")
 
     return indexedFactors
 
@@ -407,91 +422,114 @@ def lcmArray(arr):
         raise Exception(f"lcm requires an array of at least two numbers, but got {arr}")
     ret = 1
     for e in arr:
-        ret = lcm(ret, e)#ret * e // gcd(ret, e)
+        ret = lcm(ret, e)
     return ret
+
+def determineShapePeriodDetails(n, numIters):
+    """
+    Determine the shapePeriod and the shapePeriodStart for the given
+    n and numIters. If these cannot be found by numIters, return UNKNOWN
+    for both values, which will indicate that the shape period shortcut
+    is not helpful for these values.
+    """
+    origList = transformRange(n)
+    currShape = getShapeFromList(origList)
+    shapeToIndexMap = defaultdict(int)
+    shapePeriod, shapePeriodStart = UNKNOWN, UNKNOWN
+    w = int(log10(numIters)) + 1
+    logDebug(f"Determining shape period detials for n = {n} and numIters = {numIters}")
+    logVerbose(f"  {0:{w}}: {currShape}")
+    for currIndex in range(1, numIters+1):
+        currShape = nextShape(currShape)
+        logVerbose(f"  {currIndex:{w}}: {currShape}")
+
+        prevIndex = shapeToIndexMap[currShape]
+        if prevIndex:
+            shapePeriodStart = prevIndex
+            shapePeriod = currIndex - shapePeriodStart
+            logDebug(f"  Found a repeated shape: shapePeriod {shapePeriod} starting at index {shapePeriodStart}")
+            logVerbose(f"  Shape: {currShape}")
+            break
+        else:
+            shapeToIndexMap[currShape] = currIndex
+
+    return shapePeriod, shapePeriodStart
 
 def runFactorShuffle(n, numIters):
     logInfo(f"Running {numIters} rounds for n = {n}:")
-    origList = transformRange(n)
     logger = logDebug
-    logList(origList, 0, logger)
-    # The first list will not be seen again, so don't bother adding it
-    # This way we can use index 0 as a flag for unseen tuples.
-    """List of tuples previously seen. May get trimmed for memory sake."""
-    prevTupleList = [()]
-    """Map from shape-tuples to lists of indices for tuples with that shape."""
-    shapeToIndicesMap = defaultdict(list)
-    """Map from indices to permutation from that index to the next index with the same shape."""
-    indexToPermMap = defaultdict(tuple)
-    period = UNKNOWN
-    periodStart = UNKNOWN
-    shapePeriod = UNKNOWN
+    # logList(origList, 0, logger)
 
+    period, periodStart = UNKNOWN, UNKNOWN
+    prevPerm, currPerm = UNKNOWN, UNKNOWN
+    perm, permFactored, indexedFactors = UNKNOWN, UNKNOWN, UNKNOWN
+    permPeriod = UNKNOWN
+    remainingIters, loopsToSkip, itersAfterLooping, shortCircuitIndex = UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN
+
+    shapePeriod, shapePeriodStart = determineShapePeriodDetails(n, numIters)
+
+    origList = transformRange(n)
     currList, symbolToValueMap = toDenatured(origList)
     symbols = set(symbolToValueMap.keys())
-    logList(currList, 0, logger)
-    for currIndex in range(1, numIters+1):
-        currList = nextList(currList)
-        logList(currList, currIndex, logger)
+    finalList = UNKNOWN
+    currIndex = 0
+    if shapePeriod == UNKNOWN:
+        logDebug(f"Shape period will NOT help, so running all {numIters} iters")
+        for i in range(numIters):
+            currIndex += 1
+            currList = nextList(currList)
+        finalList = currList
+    else:
+        logDebug(f"Shape period WILL help")
+        for i in range(shapePeriodStart):
+            currIndex += 1
+            currList = nextList(currList)
+        if verbose:
+            currShape = getShapeFromList(currList)
+            logVerbose(f"After {shapePeriodStart} iters:")
+            logVerbose(f"  List:  {currList}")
+            logVerbose(f"  Shape: {currShape}")
 
-        currTuple = tuple(tuple(e) for e in currList)
-        currShape = getShapeFromTuple(currTuple)
+        prevPerm, currPerm = UNKNOWN, UNKNOWN
+        # Figure out perm to shortcut with. Stop at numIters if encountered first.
+        while ((prevPerm == UNKNOWN) or (prevPerm != currPerm)) and (currIndex != numIters):
+            prevList = currList
+            for i in range(shapePeriod):
+                currIndex += 1
+                currList = nextList(currList)
+                if currIndex == numIters:
+                    break
+            prevPerm = currPerm
+            currPerm, currPermFactored = computePerm(prevList, currList, symbols)
 
-        prevTupleList.append(currTuple)
-
-        if currIndex % (10 ** 5) == 0:
-            logDebug(f"At step {currIndex}")
-
-        prevIndices = shapeToIndicesMap[currShape]
-        if len(prevIndices) > 0:
-            # compute and store new perm
-            if debug:
-                logDebug(f"    prevIndices: {prevIndices}")
-                logDebug(f"    prevTuples:")
-                for prevI in prevIndices:
-                    prevT = prevTupleList[prevI]
-                    logDebug(f"      {prevI:2}: {prevT}")
-                logDebug(f"    prevPerms:")
-                for prevI in prevIndices[:-1]:
-                    # logDebug(f"  prevI: {prevI}")
-                    _, prevP, _ = indexToPermMap[prevI]
-                    logDebug(f"      {prevI:2}: {prevP}")
-
-            prevIndex = prevIndices[-1]
-            prevTuple = prevTupleList[prevIndex]
-            perm, permFactored = computePerm(prevTuple, currTuple, symbols)
-            indexToPermMap[prevIndex] = permFactored
-
-        permA = 0
-        permB = 1
-        if len(prevIndices) > 1 and (shapePeriod == UNKNOWN or (currIndex % shapePeriod == 0)):
-            prevIndexA = prevIndices[-2]
-            prevIndexB = prevIndices[-1]
-            permA = indexToPermMap[prevIndexA]
-            permB = indexToPermMap[prevIndexB]
-
-        if permA == permB:
-            logDebug(f"Found two identical perms: {permA}")
-            periodStart = prevIndexA
-            # extract permutation going from prevIndex to i = currIndex
-            shapePeriod = prevIndexB - prevIndexA
+        if prevPerm == currPerm:
+            perm = currPerm
+            permFactored = currPermFactored
             permPeriod = lcmArray([len(factor) for factor in permFactored])
             period = permPeriod * shapePeriod
+            periodStart = currIndex - 2*shapePeriod
 
             remainingIters = numIters - currIndex
+            # fullPeriodsToSkip = remainingIters // period
             loopsToSkip = remainingIters // period
+            # itersAfterFullPeriods = remainingIters % period
             itersAfterLooping = remainingIters % period
             shortCircuitIndex = currIndex + itersAfterLooping
 
             # extend list, if needed
+            # logList(currList, currIndex)
+            logInfo(f"Need to perform {remainingIters} more steps")
+            logInfo(f"  Need to perform {loopsToSkip} full periods to skip")
+            # additionalShortCircuitSteps = shortCircuitIndex - currIndex
             additionalSteps = shortCircuitIndex - currIndex
+            logInfo(f"  Need to perform {additionalSteps} more steps after ignoring full periods")
             if additionalSteps > 0:
                 shapeLoops = additionalSteps // shapePeriod
                 additionalSubSteps = additionalSteps % shapePeriod
-                logInfo(f"Need to perform {additionalSteps} more steps")
-                logInfo(f"  {shapeLoops:4} shape periods")
+                logInfo(f"    {shapeLoops} shape periods")
+                # indexedPermFactors = transformPermToIndexedFactors(perm)
                 indexedFactors = transformPermToIndexedFactors(perm)
-                finalList = []
+                tmpList = []
                 for e in currList:
                     newE = []
                     for v in e:
@@ -499,68 +537,57 @@ def runFactorShuffle(n, numIters):
                         lenFactor = len(factor)
                         newV = factor[shapeLoops % lenFactor]
                         newE.append(newV)
-                    finalList.append(newE)
-                logInfo(f"  After shape periods:")
-                logDebug(f"  {currIndex + shapeLoops*shapePeriod:2}: {finalList}")
-                # logList(finalList, currIndex + shapeLoops*shapePeriod, logInfo)
-                logInfo(f"  {additionalSubSteps:4} steps after shape periods")
-                for ii in range(1, additionalSubSteps+1):
-                    finalList = nextList(finalList)
-                    logDebug(f"  {currIndex + shapeLoops*shapePeriod + ii:2}: {finalList}")
+                    tmpList.append(newE)
+                # logDebug(f"  After shape periods:")
+                #logDebug(f"  {currIndex + shapeLoops*shapePeriod:2}: {finalList}")
+                # logList(finalList, currIndex + shapeLoops*shapePeriod, logDebug)
+
+                logInfo(f"    {additionalSubSteps} steps after shape periods")
+                for i in range(additionalSubSteps):
+                    tmpList = nextList(tmpList)
+                    #logDebug(f"  {currIndex + shapeLoops*shapePeriod + ii:2}: {finalList}")
                     # logList(finalList, currIndex + shapeLoops*shapePeriod + 11, logInfo)
-            else:
-                finalList = prevTupleList[shortCircuitIndex]
+                # logList(currList, currIndex)
+                currList = tmpList
 
-            finalListOrigValues = [[symbolToValueMap[e] for e in ee] for ee in finalList]
+        finalList = currList
+        finalShape = getShapeFromList(finalList)
+        # logList(finalList, numIters)
 
-            logInfo(f"---------- THIS ENTRY HAS BEEN SEEN BEFORE ----------")
-            logInfo(f"  n                  {n}")
-            logInfo(f"  numIters           {numIters}")
-            logInfo(f"  " + "-" * 50)
-            logInfo(f"  currIndex          {currIndex}")
-            logInfo(f"  periodStart        {periodStart}")
-            logInfo(f"  shapePeriod        {shapePeriod}")
-            logInfo(f"  currShape:         {currShape}")
-            logInfo(f"  permPeriod         {permPeriod}")
-            logInfo(f"  period             {period} = {shapePeriod} * {permPeriod}")
-            logInfo(f"  remainingIters     {remainingIters}")
-            logInfo(f"  loopsToSkip:       {loopsToSkip}")
-            logInfo(f"  itersAfterLooping: {itersAfterLooping}")
-            logInfo(f"  shortCircuitIndex: {shortCircuitIndex}")
-            logInfo(f"  " + "-" * 50)
-            logInfo(f"  finalList:           {finalList}")
-            logInfo(f"  finalListOrigValues: {finalListOrigValues}")
-            logInfo(f"-----------------------------------------------------")
+        # finalListOrigValues = [[symbolToValueMap[e] for e in ee] for ee in finalList]
 
-            currList = finalList
-            break
-        else:
-            shapeToIndicesMap[currShape].append(currIndex)
-            
-        # only track the last two indices/perms/etc
-        indicesToTrim = shapeToIndicesMap[currShape][0:-2]
-        indicesToKeep = shapeToIndicesMap[currShape][-2:]
-        logInfo(f"currIndex: {currIndex} - trimming indices {indicesToTrim} - keep indices {indicesToKeep}")
-        for ii in indicesToTrim:
-            indexToPermMap.pop(ii)
-        shapeToIndicesMap[currShape] = indicesToKeep
-        # Trim prevTupleList
-        minIndexToKeep = min([0] + indicesToKeep)
-        for ii in range(minIndexToKeep):
-            prevTupleList[ii] = CLEARED
-            
-    finalValueList = [[symbolToValueMap[i] for i in e] for e in currList]
+        logInfo(f"---------- THIS ENTRY HAS BEEN SEEN BEFORE ----------")
+        logInfo(f"  n                  {n}")
+        logInfo(f"  numIters           {numIters}")
+        logInfo(f"  " + "-" * 50)
+        logInfo(f"  currIndex          {currIndex}")
+        logInfo(f"  periodStart        {periodStart}")
+        logInfo(f"  shapePeriod        {shapePeriod}")
+        logInfo(f"  finalShape:        {tuple(finalShape)}")
+        logInfo(f"  permPeriod         {permPeriod}")
+        logInfo(f"  period             {period} = {shapePeriod} * {permPeriod}")
+        logInfo(f"  remainingIters     {remainingIters}")
+        logInfo(f"  loopsToSkip:       {loopsToSkip}")
+        logInfo(f"  itersAfterLooping: {itersAfterLooping}")
+        logInfo(f"  shortCircuitIndex: {shortCircuitIndex}")
+        # logInfo(f"  " + "-" * 50)
+        # logInfo(f"  finalList:           {finalList}")
+        # logInfo(f"  finalListOrigValues: {finalListOrigValues}")
+        logInfo(f"-----------------------------------------------------")
 
-    logVerbose(f"Final symbol list:")
-    logList(currList, numIters, logVerbose)
-    logVerbose(f"Final value list:")
-    logList(finalValueList, numIters, logVerbose)
+    finalValueList = [[symbolToValueMap[i] for i in e] for e in finalList]
+
+    # if verbose:
+    #     logVerbose(f"Final symbol list:")
+    #     logList(currList, numIters, logVerbose)
+    #     logVerbose(f"Final value list:")
+    #     logList(finalValueList, numIters, logVerbose)
 
     prodList = transformFactoredListIntoProductList(finalValueList)
     finalSum = sum(prodList)
     logInfo(f"S({n}, {numIters}) -> {prodList} -> {finalSum}")
 
-    return finalSum, period, periodStart
+    return finalSum, period, periodStart, shapePeriod, shapePeriodStart
 
 def runTests():
     for test in TESTS:
@@ -570,10 +597,10 @@ def runTests():
         expected = test.expected
         logInfo(f"Running against N = {N}")
 
-        ansBeforeMod, period, periodStart = runFactorShuffle(N, numIters)
-        logInfo(f"period(n = {N:7d}) = {period:7} (starts at {periodStart:7}) (final sum after {numIters} rounds: {ansBeforeMod}")
+        ansBeforeMod, period, periodStart, shapePeriod, shapePeriodStart = runFactorShuffle(N, numIters)
+        # logInfo(f"period(n = {N:7d}) = {period:7} (starts at {periodStart:7}) (final sum after {numIters} rounds: {ansBeforeMod}")
         ans = ansBeforeMod % MOD
-        result = TestCase(N, numIters, ans, period, periodStart)
+        result = TestCase(N, numIters, ans, period, periodStart, shapePeriod, shapePeriodStart)
         printTestResult(test, result)
 
         endTime = getTimeInMillis()
