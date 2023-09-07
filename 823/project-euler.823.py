@@ -193,6 +193,11 @@ def nextList(currList):
     nextList.append(nextE)
     return nextList
 
+def stepMulti(currList, currIndex, numSteps):
+    for i in range(numSteps):
+        currList = nextList(currList)
+    return currList, currIndex + numSteps
+
 def logValueMap(valueMap, indent=2, logger = logVerbose):
     for i in sorted(valueMap.keys()):
         v = valueMap[i]
@@ -415,30 +420,25 @@ def runFactorShuffle(n, numIters):
     currIndex = 0
     if shapePeriod == UNKNOWN:
         logDebug(f"Shape period will NOT help, so running all {numIters} iters")
-        for i in range(numIters):
-            currIndex += 1
-            currList = nextList(currList)
-        finalList = currList
+        currList, currIndex = stepMulti(currList, currIndex, numIters)
     else:
         logDebug(f"Shape period WILL help")
-        for i in range(shapePeriodStart):
-            currIndex += 1
-            currList = nextList(currList)
+        currList, currIndex = stepMulti(currList, currIndex, shapePeriodStart)
         if verbose:
             currShape = getShapeFromList(currList)
-            logVerbose(f"After {shapePeriodStart} iters:")
+            logVerbose(f"After shapePeriodStart={shapePeriodStart} iters:")
             logVerbose(f"  List:  {currList}")
             logVerbose(f"  Shape: {currShape}")
 
         prevPerm, currPerm = UNKNOWN, UNKNOWN
         # Figure out perm to shortcut with. Stop at numIters if encountered first.
-        while ((prevPerm == UNKNOWN) or (prevPerm != currPerm)) and (currIndex != numIters):
+        while ((prevPerm == UNKNOWN) or (prevPerm != currPerm)):
             prevList = currList
-            for i in range(shapePeriod):
-                currIndex += 1
-                currList = nextList(currList)
-                if currIndex == numIters:
-                    break
+            maxNextSteps = numIters - currIndex
+            numSteps = min(maxNextSteps, shapePeriod)
+            currList, currIndex = stepMulti(currList, currIndex, numSteps)
+            if maxNextSteps <= shapePeriod:
+                break
             prevPerm = currPerm
             currPerm, currPermFactored = computePerm(prevList, currList, symbols)
 
@@ -487,54 +487,59 @@ def runFactorShuffle(n, numIters):
                 currList = tmpList
                 logList(currList, currIndex)
 
-        finalList = currList
-        finalShape = getShapeFromList(finalList)
+    finalIndex = currIndex
+    finalList = currList
+    finalShape = getShapeFromList(finalList)
 
-        finalListOrigValues = [[symbolToValueMap[e] for e in ee] for ee in finalList]
+    finalListOrigValues = [[symbolToValueMap[e] for e in ee] for ee in finalList]
 
-        logInfo(f"---------- THIS ENTRY HAS BEEN SEEN BEFORE ----------")
-        logInfo(f"  n                  {n}")
-        logInfo(f"  numIters           {numIters}")
-        logInfo(f"  " + "-" * 50)
-        logInfo(f"  currIndex          {currIndex}")
-        logInfo(f"  periodStart        {periodStart}")
-        logInfo(f"  shapePeriod        {shapePeriod}")
-        logInfo(f"  finalShape:        {tuple(finalShape)}")
-        logInfo(f"  permPeriod         {permPeriod}")
-        logInfo(f"  period             {period} = {shapePeriod} * {permPeriod}")
-        logInfo(f"  remainingIters     {remainingIters}")
-        logInfo(f"  loopsToSkip:       {fullPeriodsToSkip}")
-        logInfo(f"  itersAfterLooping: {itersAfterFullPeriods}")
-        logInfo(f"  shortCircuitIndex: {shortCircuitIndex}")
-        logDebug(f"  " + "-" * 50)
-        logDebug(f"  finalList:           {finalList}")
-        logDebug(f"  finalListOrigValues: {finalListOrigValues}")
-        logInfo(f"-----------------------------------------------------")
-
-    finalValueList = [[symbolToValueMap[i] for i in e] for e in finalList]
+    logInfo(f"------------------- RESULT DETAILS -------------------")
+    logInfo(f"  n                  {n}")
+    logInfo(f"  numIters           {numIters}")
+    logInfo(f"  " + "-" * 50)
+    logInfo(f"  finalIndex         {finalIndex}")
+    logInfo(f"  shortCircuitIndex: {shortCircuitIndex}")
+    logInfo(f"  finalShape:        {tuple(finalShape)}")
+    logInfo(f"  " + "-" * 50)
+    # index of first repeated shape
+    # index of start of first loop
+    # shapeLoop len
+    # permutation len
+    # full period len
+    logInfo(f"  periodStart        {periodStart}")
+    logInfo(f"  shapePeriod        {shapePeriod}")
+    logInfo(f"  permPeriod         {permPeriod}")
+    logInfo(f"  period             {period} = {shapePeriod} * {permPeriod}")
+    logInfo(f"  remainingIters     {remainingIters}")
+    logInfo(f"  loopsToSkip:       {fullPeriodsToSkip}")
+    logInfo(f"  itersAfterLooping: {itersAfterFullPeriods}")
+    logDebug(f"  " + "-" * 50)
+    logDebug(f"  finalList:           {finalList}")
+    logDebug(f"  finalListOrigValues: {finalListOrigValues}")
+    logInfo(f"------------------------------------------------------")
 
     if verbose:
         logVerbose(f"Final symbol list:")
         logList(currList, numIters, logVerbose)
         logVerbose(f"Final value list:")
-        logList(finalValueList, numIters, logVerbose)
+        logList(finalListOrigValues, numIters, logVerbose)
 
-    prodList = transformFactoredListIntoProductList(finalValueList)
+    prodList = transformFactoredListIntoProductList(finalListOrigValues)
     finalSum = sum(prodList)
-    logInfo(f"S({n}, {numIters}) -> {prodList} -> {finalSum}")
+    finalSumAfterMod = finalSum % MOD
+    logInfo(f"S({n}, {numIters}) -> {finalSum}")
+    logDebug(f"S({n}, {numIters}) -> {prodList} -> {finalSum}")
 
-    return finalSum, period, periodStart, shapePeriod, shapePeriodStart
+    return finalSum, finalSumAfterMod, period, periodStart, shapePeriod, shapePeriodStart
 
 def runTests(tests):
     for test in tests:
         startTime = getTimeInMillis()
         N = test.N
         numIters = test.numIters
-        expected = test.expected
         logInfo(f"Running against N = {N}")
 
-        ansBeforeMod, period, periodStart, shapePeriod, shapePeriodStart = runFactorShuffle(N, numIters)
-        ans = ansBeforeMod % MOD
+        ansBeforeMod, ans, period, periodStart, shapePeriod, shapePeriodStart = runFactorShuffle(N, numIters)
         result = TestCase(N, numIters, ans, period, periodStart, shapePeriod, shapePeriodStart)
         printTestResult(test, result)
 
