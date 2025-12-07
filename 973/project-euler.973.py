@@ -9,6 +9,7 @@ from datetime import timedelta
 import time
 from colorama import Fore, Back, Style
 from copy import deepcopy
+from fractions import Fraction
 
 from functools import reduce
 from operator import xor
@@ -26,7 +27,7 @@ class TestCaseCollections:
             TestCase(2, 2),
             TestCase(3, 10),
             TestCase(4, 14),
-            # TestCase(5, UNKNOWN),
+            TestCase(5, UNKNOWN),
             # TestCase(6, UNKNOWN),
             # TestCase(7, UNKNOWN),
             # TestCase(8, UNKNOWN),
@@ -147,20 +148,43 @@ def runRandomDealings(n):
     x = 0
     xmap = defaultdict(lambda: defaultdict(int))
 
-    # breakpoint()
-    for sizes in generate_pile_sizes(n):
-        for i in range(len(sizes)):
+    pile_sizes = list(generate_pile_sizes(n))
+    for sizes in pile_sizes:
+        k = len(sizes)
+        for i in range(k):
             for redistribution in redistribute_pile(sizes, i):
                 xmap[sizes][redistribution] += 1
+
+        denominator = k * (k-1)
+        for redistribution, numerator in reversed(xmap[sizes].items()):
+            xmap[sizes][redistribution] = Fraction(numerator, denominator)
+
+        
 
     print(f"xmap:")
     for sizes in reversed(xmap):
         score = score_piles(sizes)
         print(f"  e({sizes}) = {score} + ", end="")
         for redistribution, coef in reversed(xmap[sizes].items()):
-            print(f"{coef}*e({redistribution}) + ", end="")
+            print(f"{coef}*e{redistribution} + ", end="")
         print("")
 
+    import numpy as np
+    # a = np.array([[1, 2], [3, 5]])
+    # b = np.array([1, 2])
+    # x = np.linalg.solve(a, b)
+    # x
+
+    matrix = []
+    scores = []
+    for sizes, redistributions in reversed(xmap.items()):
+        matrix.append([redistributions[s] or Fraction(0,1) for s in pile_sizes])
+        scores.append(Fraction(score_piles(sizes), 1))
+    a = np.array(matrix)
+    b = np.array(scores)
+    print(f"a: {a}")
+    print(f"b: {b}")
+    x = np.linalg.solve(a, b)
 
     logInfo(f"------------------- RESULT DETAILS -------------------")
     logInfo(f"  X({n}) = {x} = {x % MOD} % {MOD}")
