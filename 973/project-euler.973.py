@@ -3,7 +3,7 @@
 # Imports
 from collections import defaultdict
 import scipy
-import numpy
+import numpy as np
 from numpy import add, array
 from datetime import timedelta
 import time
@@ -27,12 +27,24 @@ class TestCaseCollections:
             TestCase(2, 2),
             TestCase(3, 10),
             TestCase(4, 14),
-            TestCase(5, UNKNOWN),
-            # TestCase(6, UNKNOWN),
-            # TestCase(7, UNKNOWN),
-            # TestCase(8, UNKNOWN),
-            # TestCase(9, UNKNOWN),
-            # TestCase(10, 1418),
+            TestCase(5, 42),
+            TestCase(6, 58),
+            TestCase(7, 206),
+            TestCase(8, 326),
+            TestCase(9, 946),
+            TestCase(10, 1418),
+            TestCase(20, 1788334),
+            TestCase(30, 995997524),  # 1995997531
+            TestCase(32, 102083445),  # 8102083501
+            # TestCase(40, UNKNOWN),  #
+            # TestCase(50, UNKNOWN),
+            # TestCase(60, UNKNOWN),
+            # TestCase(70, UNKNOWN),
+            # TestCase(80, UNKNOWN),
+            # TestCase(90, UNKNOWN),
+            # TestCase(100, UNKNOWN),
+            # TestCase(1000, UNKNOWN),
+            # TestCase(10000, UNKNOWN),
         ]
         self.CHALLENGES = []
 
@@ -41,7 +53,7 @@ MOD = 10**9 + 7
 
 # Logging
 info = True
-debug = True
+debug = False
 verbose = False
 timing = True
 def logInfo(msg = ""):
@@ -90,11 +102,10 @@ def generate_pile_sizes(n):
     
     Start with (n), (n-1,1), (n-2,2), (n-2,1,1), ...
     """
-    # breakpoint()
-    logDebug(f"generate_pile_sizes({n})")
+    # logDebug(f"generate_pile_sizes({n})")
     sizes = [n]
     while sizes:
-        logDebug(f"  {sizes}")
+        # logDebug(f"  {sizes}")
         yield tuple(sizes)
         if sizes[0] == 1:
             break
@@ -122,7 +133,7 @@ def redistribute_pile(sizes, i):
 
     E.g., sizes=(3,2,1) and i=2 would be [(4,1,1), (3,2,1)]
     """
-    logDebug(f"    redistribute_pile({sizes}, {i})")
+    # logDebug(f"    redistribute_pile({sizes}, {i})")
     v = sizes[i]
     redistributions = []
     for j in range(len(sizes)):
@@ -137,7 +148,7 @@ def redistribute_pile(sizes, i):
         redistribution = sorted(redistribution[:i] + redistribution[i+1:])
         redistribution.reverse()
 
-        logDebug(f"      {redistribution}")
+        # logDebug(f"      {redistribution}")
         redistributions.append(tuple(redistribution))
 
     return redistributions
@@ -149,6 +160,8 @@ def runRandomDealings(n):
     xmap = defaultdict(lambda: defaultdict(int))
 
     pile_sizes = list(generate_pile_sizes(n))
+    logInfo(f"generate_pile_sizes({n}) has size {len(pile_sizes)}")
+    logInfo(f"Computing equation maps")
     for sizes in pile_sizes:
         k = len(sizes)
         for i in range(k):
@@ -157,34 +170,37 @@ def runRandomDealings(n):
 
         denominator = k * (k-1)
         for redistribution, numerator in reversed(xmap[sizes].items()):
-            xmap[sizes][redistribution] = Fraction(numerator, denominator)
+            # xmap[sizes][redistribution] = Fraction(numerator, denominator)
+            xmap[sizes][redistribution] = numerator / denominator
 
-        
+    # print(f"xmap:")
+    # for sizes in reversed(xmap):
+    #     score = score_piles(sizes)
+    #     print(f"  e({sizes}) = {score} + ", end="")
+    #     for redistribution, coef in reversed(xmap[sizes].items()):
+    #         print(f"{coef}*e{redistribution} + ", end="")
+    #     print("")
 
-    print(f"xmap:")
-    for sizes in reversed(xmap):
-        score = score_piles(sizes)
-        print(f"  e({sizes}) = {score} + ", end="")
-        for redistribution, coef in reversed(xmap[sizes].items()):
-            print(f"{coef}*e{redistribution} + ", end="")
-        print("")
-
-    import numpy as np
-    # a = np.array([[1, 2], [3, 5]])
-    # b = np.array([1, 2])
-    # x = np.linalg.solve(a, b)
-    # x
-
+    # Form equation and solve
+    logInfo(f"Computing matrix and array")
     matrix = []
     scores = []
     for sizes, redistributions in reversed(xmap.items()):
-        matrix.append([redistributions[s] or Fraction(0,1) for s in pile_sizes])
-        scores.append(Fraction(score_piles(sizes), 1))
+        # matrix.append([redistributions[s] or Fraction(0,1) for s in pile_sizes])
+        # scores.append(Fraction(score_piles(sizes), 1))
+        row = [-redistributions[s] for s in pile_sizes]
+        row[pile_sizes.index(sizes)] += 1
+        matrix.append(row)
+        scores.append(score_piles(sizes))
     a = np.array(matrix)
     b = np.array(scores)
-    print(f"a: {a}")
-    print(f"b: {b}")
-    x = np.linalg.solve(a, b)
+    # logDebug(f"a:\n{a}")
+    # logDebug(f"b: {b}")
+    logInfo(f"Solving matrix eqn...")
+    X = np.linalg.solve(a, b)
+    # logDebug(f"X: {X}")
+    # x = X[-1]
+    x = round(X[-1])
 
     logInfo(f"------------------- RESULT DETAILS -------------------")
     logInfo(f"  X({n}) = {x} = {x % MOD} % {MOD}")
