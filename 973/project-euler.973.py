@@ -101,6 +101,16 @@ def generate_pile_sizes(n):
     """Generator for all piles sizes possible for a deck of size n.
     
     Start with (n), (n-1,1), (n-2,2), (n-2,1,1), ...
+
+    ISSUE: This method is computing the "partitions of n." The size of such
+    set is called the "partition function of n," and it grows too fast to be usable
+    much beyond n = 30. According to
+        https://en.wikipedia.org/wiki/Partition_function_(number_theory)
+        https://oeis.org/A000041
+    the size of the set for n = 10**4 is about 3.6 * 10**106.
+
+    So I need to find a better solution than merely trying to iterate through this
+    "just once." Hmm...
     """
     # logDebug(f"generate_pile_sizes({n})")
     sizes = [n]
