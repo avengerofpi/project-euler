@@ -10,6 +10,7 @@ import time
 from colorama import Fore, Back, Style
 from copy import deepcopy
 from fractions import Fraction
+from math import log10
 
 from functools import reduce
 from operator import xor
@@ -33,6 +34,8 @@ class TestCaseCollections:
             TestCase(8, 326),
             TestCase(9, 946),
             TestCase(10, 1418),
+        ]
+        self.CHALLENGES = [
             TestCase(20, 1788334),
             TestCase(30, 995997524),  # 1995997531
             TestCase(32, 102083445),  # 8102083501
@@ -46,16 +49,15 @@ class TestCaseCollections:
             # TestCase(1000, UNKNOWN),
             # TestCase(10000, UNKNOWN),
         ]
-        self.CHALLENGES = []
 
 # Constants
 MOD = 10**9 + 7
 
 # Logging
-info = True
+info = False
 debug = False
 verbose = False
-timing = True
+timing = False
 def logInfo(msg = ""):
     if info:
         print("INFO: " + msg, flush=True)
@@ -204,13 +206,16 @@ def runRandomDealings(n):
         scores.append(score_piles(sizes))
     a = np.array(matrix)
     b = np.array(scores)
-    # logDebug(f"a:\n{a}")
-    # logDebug(f"b: {b}")
+    logDebug(f"a:\n{a}")
+    logDebug(f"b: {b}")
     logInfo(f"Solving matrix eqn...")
     X = np.linalg.solve(a, b)
-    # logDebug(f"X: {X}")
-    # x = X[-1]
+    max_w = int(log10(X[-1])) + 1
+    for sizes, e in zip(pile_sizes, X):
+        print(f"e({','.join(map(str, sizes)):<{2*n-1}}): {e:>{max_w+6}.5f}")
     x = round(X[-1])
+    print(f"X({n}) = {x} = {x % MOD} % {MOD}")
+    print()
 
     logInfo(f"------------------- RESULT DETAILS -------------------")
     logInfo(f"  X({n}) = {x} = {x % MOD} % {MOD}")
