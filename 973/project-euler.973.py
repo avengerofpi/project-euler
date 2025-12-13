@@ -169,7 +169,7 @@ def runRandomDealings(n):
     logInfo(f"Computing X({n}):")
 
     x = 0
-    xmap = defaultdict(lambda: defaultdict(int))
+    xmap = defaultdict(lambda: defaultdict(Fraction))
 
     pile_sizes = list(generate_pile_sizes(n))
     logInfo(f"generate_pile_sizes({n}) has size {len(pile_sizes)}")
@@ -182,37 +182,44 @@ def runRandomDealings(n):
 
         denominator = k * (k-1)
         for redistribution, numerator in reversed(xmap[sizes].items()):
-            # xmap[sizes][redistribution] = Fraction(numerator, denominator)
-            xmap[sizes][redistribution] = numerator / denominator
+            xmap[sizes][redistribution] = Fraction(numerator, denominator)
 
-    # print(f"xmap:")
-    # for sizes in reversed(xmap):
-    #     score = score_piles(sizes)
-    #     print(f"  e({sizes}) = {score} + ", end="")
-    #     for redistribution, coef in reversed(xmap[sizes].items()):
-    #         print(f"{coef}*e{redistribution} + ", end="")
-    #     print("")
+    print(f"xmap:")
+    for sizes in xmap:
+        score = score_piles(sizes)
+        print(f"  e({sizes}) = {score} + ", end="")
+        for redistribution, coef in reversed(xmap[sizes].items()):
+            print(f"{coef}*e{redistribution} + ", end="")
+        print("")
 
     # Form equation and solve
     logInfo(f"Computing matrix and array")
     matrix = []
-    scores = []
-    for sizes, redistributions in reversed(xmap.items()):
-        # matrix.append([redistributions[s] or Fraction(0,1) for s in pile_sizes])
-        # scores.append(Fraction(score_piles(sizes), 1))
-        row = [-redistributions[s] for s in pile_sizes]
+    for sizes, redistributions in xmap.items():
+        row = [-redistributions[s] for s in pile_sizes] + [Fraction(score_piles(sizes))]
         row[pile_sizes.index(sizes)] += 1
         matrix.append(row)
-        scores.append(score_piles(sizes))
-    a = np.array(matrix)
-    b = np.array(scores)
-    logDebug(f"a:\n{a}")
-    logDebug(f"b: {b}")
-    logInfo(f"Solving matrix eqn...")
-    X = np.linalg.solve(a, b)
-    max_w = int(log10(X[-1])) + 1
-    for sizes, e in zip(pile_sizes, X):
-        print(f"e({','.join(map(str, sizes)):<{2*n-1}}): {e:>{max_w+6}.5f}")
+
+    # Perform Gaussian elimination
+    A = matrix
+    num_rows = len(A)
+    num_cols = len(A[0])
+    from itertools import product
+    print("A:")
+    printFractionsMatrix(A)
+    for i in range(num_rows):
+        # Make the diagonal contain all 1s
+        A[i] = [e / A[i][i] for e in A[i]]
+        for j in range(i + 1, num_rows):
+            A[j] = [A[j][k] - A[j][i] * A[i][k] for k in range(num_cols)]
+
+    # Back substitution to find the solution
+    print("X:")
+    X = [0] * num_rows
+    for i in range(num_rows - 1, -1, -1):
+        X[i] = A[i][-1] - sum(A[i][i + 1:num_rows][k] * X[i + 1:num_rows][k] for k in range(num_rows-i-2))
+        print(f"  {X[i]}")
+
     x = round(X[-1])
     print(f"X({n}) = {x} = {x % MOD} % {MOD}")
     print()
@@ -225,6 +232,10 @@ def runRandomDealings(n):
         pass
 
     return x
+
+def printFractionsMatrix(m):
+    for row in m:
+        print(f"[{', '.join(map(str, row))}]")
 
 def runTests(tests):
     for test in tests:
