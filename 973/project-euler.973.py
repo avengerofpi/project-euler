@@ -237,6 +237,21 @@ def printFractionsMatrix(m):
     for row in m:
         print(f"[{', '.join(map(str, row))}]")
 
+def computePartitionNumber(n):
+    # p((a,b)) is the number of partitions of a where the min partition size is b
+    # e.g., p(7,2) = |{(5,2), (3,2,2)}| = 2
+    p = [[0] * (n+1) for i in range(n+1)]
+    p[0][1] = 1
+    pn =  [1] # partition number of n
+    for i in range(1, n+1):
+        p[i][1] = pn[i-1]
+        for j in range(2, i):
+            p[i][j] = sum(p[i-j][j:])
+        p[i][i] = 1
+        pn.append(sum(p[i]))
+        print(f"p[{i}]: {p[i]}")
+        print(f"pn({i}) = {pn[i]}")
+
 def runTests(tests):
     for test in tests:
         startTime = getTimeInMillis()
@@ -269,6 +284,8 @@ def main():
     testCaseCollections = TestCaseCollections()
     tests = testCaseCollections.BASE
     runTests(tests)
+
+    computePartitionNumber(30)
 
 # Main logic
 if __name__ == '__main__':
