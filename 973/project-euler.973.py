@@ -244,13 +244,11 @@ def computePartitionNumber(n):
     p[0][1] = 1
     pn =  [1] # partition number of n
     for i in range(1, n+1):
-        p[i][1] = pn[i-1]
-        for j in range(2, i):
+        for j in range(1, i):
             p[i][j] = sum(p[i-j][j:])
         p[i][i] = 1
         pn.append(sum(p[i]))
-        print(f"p[{i}]: {p[i]}")
-        print(f"pn({i}) = {pn[i]}")
+        print(f"pn({i}) = {pn[i]} = {pn[i]:e}")
 
 def runTests(tests):
     for test in tests:
