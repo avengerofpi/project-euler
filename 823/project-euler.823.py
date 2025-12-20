@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Imports
 from math import log, log2, log10, prod, sqrt, gcd
