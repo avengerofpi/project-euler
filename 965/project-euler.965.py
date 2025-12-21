@@ -33,7 +33,9 @@ class TestCaseCollections:
             TestCase(20, 0.076648811285),
             TestCase(100, 0.0204893783592),
             TestCase(1000, 0.002751455605),
-            TestCase(10**4, UNKNOWN),
+            # TestCase(10**4, UNKNOWN),  # 10.5 sec
+            TestCase(35000, 0.0001095147945),  # 2 min, 13 sec
+            # TestCase(10**5, 0.0000415216278),  # 18 min, 46 sec
         ]
 
 # Constants
