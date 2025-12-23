@@ -30,7 +30,16 @@ class TestCaseCollections:
             TestCase(10000, 312807),
         ]
         self.CHALLENGES = [
-            TestCase(10**13, UNKNOWN),
+            TestCase(10**5, 8625184),  # 0.5s (0.09s with logging commented out)
+            TestCase(10**6, 236315760),  # 6s (1.04s with logging commented out)
+            TestCase(10**7, 6393391136),  # 12s with logging commented out; 1.7GB memory (10.7% of 1GGB)
+            TestCase(5*10**7, 66251208440),  # 55s with logging commented out; 9.5GB memory (59.4% of 1GGB)
+            # TestCase(10**8, UNKNOWN),
+            # TestCase(10**9, UNKNOWN),
+            # TestCase(10**10, UNKNOWN),
+            # TestCase(10**11, UNKNOWN),
+            # TestCase(10**12, UNKNOWN),
+            # TestCase(10**13, UNKNOWN),
         ]
 
 # Constants
@@ -86,36 +95,34 @@ def get_fib_up_to_n(n):
     if n == 1:
         return [1]
     fib = [1, 2]
-    logDebug(f"get_fib_up_to_n({n})")
+    # logDebug(f"get_fib_up_to_n({n})")
     while (f := sum(fib[-2:])) and f <= n:
         fib.append(f)
-        logDebug(f"  {f}: {fib}")
-    logDebug(f"get_fib_up_to_n({n}) has {len(fib)} elements")
-    logDebug("")
+        # logDebug(f"  {f}: {fib}")
+    # logDebug(f"get_fib_up_to_n({n}) has {len(fib)} elements")
+    # logDebug("")
     return fib
 
 def not_zeckendorf(n):
     fib = get_fib_up_to_n(n)
-    from collections import defaultdict
-    sum_tuples = defaultdict(list)
-    sum_tuples[0] = [tuple()]
+    counts = defaultdict(int)
+    counts[0] = 1
     for f in fib:
-        logDebug(f"{f}")
-        for s, tt in list(reversed(sum_tuples.items())):
-            logDebug(f"  {s}={tt} (existing values)")
-            for t in tt:
-                if s+f <= n:
-                    sum_tuples[s+f].append(t + (f,))
-                    logDebug(f"    {s+f}={sum_tuples[s+f]} (appended)")
-        logDebug(f"  {sorted(sum_tuples.items())}")
-        logDebug(f"{f}")
-        for s, tt in sorted(sum_tuples.items()):
-           if s > n:
-               continue
-           logDebug(f"  {s}")
-           for t in tt:
-               logDebug(f"    {t}")
-    total = sum(len(tt) for s, tt in sum_tuples.items() if s <= n)
+        # logDebug(f"{f} (start of this round)")
+        for s, c in sorted(counts.items()):
+            t = s+f
+            # logDebug(f"  {s}={c}         (existing)")
+            # logDebug(f"    {t}={counts[t]} (existing)")
+            if t <= n:
+                counts[t] += c
+                # logDebug(f"    {t}={counts[t]} (incremented)")
+        # logDebug(f"  {sorted(counts.items())}")
+        # logDebug(f"{f} (end of this round)")
+        # for s, c in sorted(counts.items()):
+        #    if s > n:
+        #        continue
+        #    # logDebug(f"  {s}: {c}")
+    total = sum(c for s, c in counts.items() if s <= n)
     return total
 
 def runTests(tests):
