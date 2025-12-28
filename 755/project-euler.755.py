@@ -16,7 +16,7 @@ class TestCase:
 class TestCaseCollections:
     def __init__(self):
         self.BASE = [
-            TestCase(1, 1),
+            TestCase(0, 1),
             TestCase(1, 2),
             TestCase(2, 3),
             TestCase(3, 5),
@@ -26,20 +26,22 @@ class TestCaseCollections:
             TestCase(8, 14),
             TestCase(9, 16),
             TestCase(10, 18),
+            TestCase(45, 2**8-118),
             TestCase(100, 415),
+            TestCase(1000, 11069),
             TestCase(10000, 312807),
         ]
         self.CHALLENGES = [
             TestCase(10**5, 8625184),  # 0.5s (0.09s with logging commented out)
             TestCase(10**6, 236315760),  # 6s (1.04s with logging commented out)
             TestCase(10**7, 6393391136),  # 12s with logging commented out; 1.7GB memory (10.7% of 1GGB)
-            TestCase(5*10**7, 66251208440),  # 55s with logging commented out; 9.5GB memory (59.4% of 1GGB)
-            # TestCase(10**8, UNKNOWN),
-            # TestCase(10**9, UNKNOWN),
-            # TestCase(10**10, UNKNOWN),
-            # TestCase(10**11, UNKNOWN),
-            # TestCase(10**12, UNKNOWN),
-            # TestCase(10**13, UNKNOWN),
+            TestCase(5*10**7, 66251208440),  # 55s with logging commented out; 9.5GB memory (59.4% of 1GGB
+            TestCase(10**8, 179397392524),
+            TestCase(10**9, 4974016607700),
+            TestCase(10**10, 136851156783936),
+            TestCase(10**11, 3724068760790032),
+            TestCase(10**12, 101355584196551168),
+            TestCase(10**13, UNKNOWN),  # efficient: < 3 seconds
         ]
 
 # Constants
@@ -95,34 +97,74 @@ def get_fib_up_to_n(n):
     if n == 1:
         return [1]
     fib = [1, 2]
-    # logDebug(f"get_fib_up_to_n({n})")
+    logDebug(f"get_fib_up_to_n({n})")
     while (f := sum(fib[-2:])) and f <= n:
         fib.append(f)
-        # logDebug(f"  {f}: {fib}")
-    # logDebug(f"get_fib_up_to_n({n}) has {len(fib)} elements")
-    # logDebug("")
+        logDebug(f"  {f}: {fib}")
+    logDebug(f"get_fib_up_to_n({n}) has {len(fib)} elements")
+    logDebug("")
+
     return fib
 
-def not_zeckendorf(n):
+def not_zeckendorf_exact_counts(n):
+    """Compute solution by explicitly counting the fib sums for each i <= n
+
+    This routine is too inefficient. For n = 5*10**7, used 55s with logging
+    commented out; 9.5GB memory (59.4% of 1GGB).
+    """
     fib = get_fib_up_to_n(n)
     counts = defaultdict(int)
     counts[0] = 1
-    for f in fib:
-        # logDebug(f"{f} (start of this round)")
-        for s, c in sorted(counts.items()):
+    for f in reversed(fib):
+        logDebug(f"{f} (start of this round)")
+        new_counts = defaultdict(int)
+        for s, c in counts.items():
             t = s+f
-            # logDebug(f"  {s}={c}         (existing)")
-            # logDebug(f"    {t}={counts[t]} (existing)")
+            logDebug(f"  {s}={c}         (existing)")
+            logDebug(f"    {t}={counts[t]} (existing)")
             if t <= n:
-                counts[t] += c
-                # logDebug(f"    {t}={counts[t]} (incremented)")
-        # logDebug(f"  {sorted(counts.items())}")
-        # logDebug(f"{f} (end of this round)")
-        # for s, c in sorted(counts.items()):
-        #    if s > n:
-        #        continue
-        #    # logDebug(f"  {s}: {c}")
-    total = sum(c for s, c in counts.items() if s <= n)
+                new_counts[t] += c
+                logDebug(f"    {t}={counts[t]} (incremented)")
+        for s, c in new_counts.items():
+            counts[s] += c
+        logVerbose(f"  {sorted(counts.items())}")
+        logVerbose(f"{f} (end of this round)")
+    for s, c in sorted(counts.items()):
+        if s in fib:
+            logVerbose("")
+        logVerbose(f"  {s}: {c}")
+    total = sum(counts.values())
+
+    return total
+
+def not_zeckendorf(n):
+    def _count_num_excess_sums(sub_fib, mx, recurse = False):
+        k = len(sub_fib)
+        if sub_fib == [] or (sum(sub_fib) <= mx):
+            excess = 0
+        elif mx == 0:  # rm all but the empty set
+            excess = 2 ** k - 1
+        elif sub_fib[-1] > mx:  # can't include the current max term
+            excess = 2 ** (k - 1)
+            if recurse:
+                excess += _count_num_excess_sums(sub_fib[:-1], mx, recurse)
+        else:
+            new_mx = mx-sub_fib[-1]
+            excess = _count_num_excess_sums(sub_fib[:-1], new_mx, recurse=True)
+
+            for i in reversed(range(k-1)):
+                excess += _count_num_excess_sums(sub_fib[:i+1], mx)
+
+        return excess
+
+    fib = get_fib_up_to_n(n)
+    k = len(fib)
+    total = 2 ** k
+
+    excess = 0
+    excess += _count_num_excess_sums(fib, n)
+    total -= excess
+
     return total
 
 def runTests(tests):
@@ -144,10 +186,8 @@ def runTests(tests):
 
 # Main logic
 def main():
-    #troubleshoot()
-
     testCaseCollections = TestCaseCollections()
-    tests = testCaseCollections.BASE #+ testCaseCollections.CHALLENGES
+    tests = testCaseCollections.BASE + testCaseCollections.CHALLENGES
     runTests(tests)
 
 # Main logic
