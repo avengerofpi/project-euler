@@ -3,6 +3,8 @@
 # Imports
 from math import log, log10, prod, sqrt
 from collections import defaultdict
+from datetime import timedelta
+import time
 
 # Constants
 class TestCase:
@@ -14,10 +16,15 @@ TESTS = [
     TestCase(100, 10),
     TestCase(1000, 180),
     TestCase(10 ** 6, 224427),
-    #TestCase(10 ** 12, "UNKNOWN"),
+    TestCase(10 ** 7, "UNKNOWN"),
+    TestCase(10 ** 8, "UNKNOWN"),
+#    TestCase(10 ** 9, "UNKNOWN"),
+#    TestCase(10 ** 10, "UNKNOWN"),
+#    TestCase(10 ** 11, "UNKNOWN"),
+#    TestCase(10 ** 12, "UNKNOWN"),
 ]
 
-# Functions
+# Logging 
 info = True
 debug = True
 verbose = False
@@ -31,6 +38,10 @@ def logVerbose(msg = ""):
     if verbose:
         print(msg, flush=True)
 
+def getTimeInMillis():
+    return int(time.time() * 1000)
+
+# Functions
 def computePrimesUpToN(N):
     """
     Inefficiently determine all primes up to (and including) the input
@@ -52,6 +63,8 @@ def computePrimesUpToN(N):
 # Main logic
 def main():
     for test in TESTS:
+        startTime = getTimeInMillis()
+        
         N = test.N
         expected = test.expected
 
@@ -60,14 +73,17 @@ def main():
         primes = computePrimesUpToN(primeBound)
         logDebug(f"  Computing primes up to {primeBound} - found {len(primes)} from {primes[0]} to {primes[-1]}")
 
-        p7List = []
-        p3qList = []
-        pqrList = []
+        p7Count = 0
+        p3qCount = 0
+        pqrCount = 0
+
         logDebug(f"Checking for n = p ** 7")
         for p in primes:
             p7 = p ** 7
             if p7 <= N:
-                p7List.append((p, p7))
+                p7Count += 1
+            else:
+                break
 
         logDebug(f"Checking for n = p**3 * q")
         for p in primes:
@@ -79,7 +95,7 @@ def main():
                     continue
                 p3q = p3 * q
                 if p3q <= N:
-                    p3qList.append((p,q,p3q))
+                    p3qCount += 1
                 else:
                     break
 
@@ -96,25 +112,30 @@ def main():
                         continue
                     pqr = pq * r
                     if pqr <= N:
-                        pqrList.append((p,q,r, pqr))
+                        pqrCount += 1
                     else:
                         break
 
-        logDebug(f"  Found {len(p7List)} numbers of the form p**7")
-        if verbose:
-            for (p,p7) in p7List:
-                logVerbose(f"    {p:4}**7= {p7:8}")
-        logDebug(f"  Found {len(p3qList)} numbers of the form p**3 * q")
-        if verbose:
-            for (p,q,p3q) in p3qList:
-                logVerbose(f"    {p:4}**3 * {q:4} = {p3q:8}")
-        logDebug(f"  Found {len(pqrList)} numbers of the form p * q * r")
-        if verbose:
-            for (p,q,r, pqr) in pqrList:
-                logVerbose(f"    {p:4} * {q:4} * {r:4} = {pqr:8}")
-        ans = len(p7List) + len(p3qList) + len(pqrList)
+        logDebug(f"  Found {p7Count} numbers of the form p**7")
+        #if verbose:
+        #    for (p,p7) in p7List:
+        #        logVerbose(f"    {p:4}**7= {p7:8}")
+        logDebug(f"  Found {p3qCount} numbers of the form p**3 * q")
+        #if verbose:
+        #    for (p,q,p3q) in p3qList:
+        #        logVerbose(f"    {p:4}**3 * {q:4} = {p3q:8}")
+        logDebug(f"  Found {pqrCount} numbers of the form p * q * r")
+        #if verbose:
+        #    for (p,q,r, pqr) in pqrList:
+        #        logVerbose(f"    {p:4} * {q:4} * {r:4} = {pqr:8}")
+        ans = p7Count + p3qCount + pqrCount
         successStr = "SUCCESS" if (ans == expected) else f"FAILURE (expected {expected})"
         logInfo(f"{N}: {ans} - {successStr}")
+
+        endTime = getTimeInMillis()
+        logTimeDiff = endTime - startTime 
+        logDebug(f"  Time spent: {timedelta(milliseconds=logTimeDiff)}")
+
         logInfo("")
 
 
