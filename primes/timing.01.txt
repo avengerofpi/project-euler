@@ -1,0 +1,5 @@
+Time spent computing      1229 <=        10000 = 10 ** 4 -> 0:00:00.007000
+Time spent computing      9592 <=       100000 = 10 ** 5 -> 0:00:00.087000
+Time spent computing     78498 <=      1000000 = 10 ** 6 -> 0:00:01.362000
+Time spent computing    664579 <=     10000000 = 10 ** 7 -> 0:00:26.082000
+Time spent computing   5761455 <=    100000000 = 10 ** 8 -> 0:09:24.340000
