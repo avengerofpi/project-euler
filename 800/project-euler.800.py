@@ -96,7 +96,6 @@ def hybridPower(p, q, logP = None, logQ = None):
     return (q * logP) + (p * logQ)
 
 def printTestResult(tc, result):
-    PATH_COLOR = Fore.RED
     RESET_COLOR = Style.RESET_ALL
 
     base = tc.base

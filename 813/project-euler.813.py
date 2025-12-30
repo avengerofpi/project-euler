@@ -226,7 +226,6 @@ def runXorPowersEfficiently(N):
     return computeModValueFromSetBits(ansSetBits)
 
 def printTestResult(tc, result):
-    PATH_COLOR = Fore.RED
     RESET_COLOR = Style.RESET_ALL
 
     expected = tc.expected

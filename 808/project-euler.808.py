@@ -81,7 +81,6 @@ def getPrimesFromFile(filename):
         return [int(line) for line in f.readlines()]
 
 def printTestResult(tc, result):
-    PATH_COLOR = Fore.RED
     RESET_COLOR = Style.RESET_ALL
 
     expected = tc.expected

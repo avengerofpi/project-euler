@@ -204,7 +204,6 @@ def logValueMap(valueMap, indent=2, logger = logVerbose):
         logger(f"{' '*indent}  {i}: {v}")
 
 def printTestResult(tc, result):
-    PATH_COLOR = Fore.RED
     RESET_COLOR = Style.RESET_ALL
 
     expected = tc.expected
