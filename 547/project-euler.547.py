@@ -8,6 +8,7 @@ import time
 from collections import defaultdict
 import itertools
 from colorama import Fore, Back, Style
+import sys
 
 # Constants
 class TestCase:
@@ -51,15 +52,15 @@ TestCase(33, "4338640.8686"), # 4338640.868571977  - probably off slightly
 TestCase(34, "5065036.4311"), # 5065036.431138666  - probably off slightly
 TestCase(35, "5885606.9588"), # 5885606.958845578  - probably off slightly
 TestCase(36, "6809225.0873"), # 6809225.087262008  - probably off slightly
-#TestCase(40, UNKNOWN),
+#TestCase(40, UNKNOWN),  # took 1day 19.75 hours to compute...
 ]
 
 # Logging
 info = True
-debug = False
+debug = True
 verbose = False
 laminaFlag = False
-colorFlag = True
+colorFlag = False
 def logInfo(msg = ""):
     if info:
         print(msg, flush=True)
@@ -133,8 +134,8 @@ def ONE(a, b, c, d):
 memoizedPartials = dict()
 def getPartial(a, b, c, d):
     options = {
-        "limit": 100,
-        "epsabs": 1.49e-10
+        "limit": 500,
+        "epsabs": 1.49e-15
     }
 
     bounds = (a, b, c, d)
@@ -228,18 +229,16 @@ def sumExpectedDistForSquareLaminaeOfSizeN(n):
     if testCase:
         expected = testCase.expected
         ansStr = f"{total:.4f}"
+
         result = TestCase(n, ansStr)
         printTestResult(testCase, result)
-        #logDebug(f"{n}: {ansStr} - {successStr}")
     endTime = getTimeInMillis()
     logTimeDiff = endTime - startTime
     logDebug(f"  Time spent: {timedelta(milliseconds=logTimeDiff)} (for N = {n:>2})")
     return total
 
-def runMain():
+def runMain(minN = 3, maxN = 40):
     total = 0
-    minN = 3
-    maxN = 40
     #for n in [3]:
     grandTotal = 0
     startTime = getTimeInMillis()
@@ -364,7 +363,14 @@ def doSomeExperimentation_breakIntoUnitSquares():
     return
 
 def main():
-    runMain()
+    N = int(sys.argv[1])
+    if N < 3 or N > 40:
+        print(f"Expected one argument, to be an int in 3..40, but got {N}")
+        return
+    else:
+        runMain(minN=N, maxN=N)
+    #runMain(minN=37, maxN=40)
+    #runMain(minN=3, maxN=40)
 
     #doSomeExperimentation_equivalentKeys()
     #doSomeExperimentation_breakIntoUnitSquares()
