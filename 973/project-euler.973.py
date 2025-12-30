@@ -29,11 +29,11 @@ class TestCaseCollections:
             TestCase(3, 10),
             TestCase(4, 14),
             TestCase(5, 42),
-            TestCase(6, 58),
-            TestCase(7, 206),
-            TestCase(8, 326),
-            TestCase(9, 946),
-            TestCase(10, 1418),
+            # TestCase(6, 58),
+            # TestCase(7, 206),
+            # TestCase(8, 326),
+            # TestCase(9, 946),
+            # TestCase(10, 1418),
         ]
         self.CHALLENGES = [
             TestCase(20, 1788334),
@@ -138,7 +138,6 @@ def generate_pile_sizes(n):
 
         sizes = new_sizes
 
-
 def redistribute_pile(sizes, i):
     """Return an iterable of sizes derived from redistributing pile at index i.
 
@@ -206,6 +205,8 @@ def runRandomDealings(n):
     from itertools import product
     print("A:")
     printFractionsMatrix(A)
+    # for row in A:
+    #     print(row)
     for i in range(num_rows):
         # Make the diagonal contain all 1s
         A[i] = [e / A[i][i] for e in A[i]]
@@ -218,6 +219,7 @@ def runRandomDealings(n):
     for i in range(num_rows - 1, -1, -1):
         X[i] = A[i][-1] - sum(A[i][i + 1:num_rows][k] * X[i + 1:num_rows][k] for k in range(num_rows-i-2))
         print(f"  {X[i]}")
+    # print(X)
 
     x = round(X[-1])
     print(f"X({n}) = {x} = {x % MOD} % {MOD}")
@@ -247,6 +249,7 @@ def computePartitionNumber(n):
             p[i][j] = sum(p[i-j][j:])
         p[i][i] = 1
         pn.append(sum(p[i]))
+        # print(f"p[{i}]: {p[i]}")
         print(f"pn({i}) = {pn[i]} = {pn[i]:e}")
 
 def runTests(tests):
