@@ -25,7 +25,12 @@ TESTS = [
     TestCase(10 ** 6,  66623446),
     TestCase(10 ** 7,  97735042),
     TestCase(10 ** 8,  38488039),
-    #TestCase(10 ** 14, "UNKNOWN"),
+    TestCase(10 ** 9,  63289614),
+    TestCase(10 ** 10, "UNKNOWN"),
+    TestCase(10 ** 11, "UNKNOWN"),
+    TestCase(10 ** 12, "UNKNOWN"),
+    TestCase(10 ** 13, "UNKNOWN"),
+    TestCase(10 ** 14, "UNKNOWN"),
 ]
 
 # Constants
@@ -77,7 +82,9 @@ def getTimeInMillis():
     return int(time.time() * 1000)
 
 # Functions
+# memoModBinaryPowersOfTen[i] = 10**{2**i} mod MODULUS
 memoModBinaryPowersOfTen = { 0: 10 }
+# Uses up a bunch of memory for larger test cases
 memoModPowersOfTen = { }
 maxN = max(testCase.N for testCase in TESTS)
 logMaxN = int(log2(maxN)) + 1
@@ -89,19 +96,18 @@ def modPowersOfTen(n):
         return memoModPowersOfTen[n]
     except:
         # e.g., n = 23 -> 0b10111 -> 10111 -> ['1', '0', '1', '1', '1'] -> ['1', '1', '1', '0' '1']
+        #                            abcde -> ['a', 'b', 'c', 'd', 'e'] -> ['e', 'd', 'c', 'b' 'a']
         binN = bin(n)
-        logVerbose(f"Computing memoModPowersOfTen[{n}]")
-        logVerbose(f"  n = {binN}")
         binN = list(bin(n)[2:])
         binN.reverse()
         t = 1
         for i in range(len(binN)):
             if binN[i] == '1':
                 p = memoModBinaryPowersOfTen[i]
-                logVerbose(f"    Factor 10**(2**{i}) = 10**{2**i} = {p} mod {MODULUS}")
-                t = (t * p) % MODULUS
+                t = t * p
+        t = t % MODULUS
         memoModPowersOfTen[n] = t
-        logVerbose(f"memoModPowersOfTen[{n}] = memoModPowersOfTen[{bin(n)}] = {t}")
+        #time.sleep(1)
         return t
 
 memoSumPowersOfTen = { 0: 0, 1: 1 }
