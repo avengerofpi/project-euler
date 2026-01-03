@@ -2,11 +2,13 @@
 
 # Imports
 from datetime import timedelta
+from pathlib import Path
 import time
 from math import prod
 
 # Constants
 N = 1 * 1000 * 1000 * 1000
+root_dir = Path(__file__).parent
 
 # Logging
 info = False
@@ -98,6 +100,29 @@ def computePrimesUpToN2(N):
         iterNum += 1
         cursor += wheelSize
     return tuple(primes)
+
+
+def primes_up_to_10k():
+    return _primes_from_file(f"{root_dir}/primes-up-to-10000.txt")
+
+def primes_up_to_1m():
+    return _primes_from_file(f"{root_dir}/primes-up-to-1million.txt")
+
+def primes_up_to_20m():
+    return _primes_from_file(f"{root_dir}/primes-up-to-20million.txt")
+
+def primes_up_to_100m():
+    return _primes_from_file(f"{root_dir}/primes-up-to-100million.txt")
+
+def primes_up_to_1b():
+    return _primes_from_file(f"{root_dir}/primes-up-to-1billion.txt")
+
+def _primes_from_file(filename):
+    with open(filename, "r") as f:
+        primes = []
+        while line := f.readline():
+            primes.append(int(line))
+    return primes
 
 # Main logic
 functions = [
